@@ -1,9 +1,10 @@
 # Basic Discord Bot
 
+Intended to be run in a replit.
 
 ### Setup
 
-Store bot secret token and owner id in env vars called `TOKEN` and `BOT_OWNER_ID` respectively.
+Store bot secret token and owner id in env vars called `TOKEN` and `BOT_OWNER_ID` respectively as in `.env.example` file.
 
 Command prefix and enabled extensions can be configured in settings.py
 
