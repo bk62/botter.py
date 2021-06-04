@@ -17,8 +17,8 @@ class Greetings(commands.Cog):
     @commands.command(
         help="Say Hello",
     )
-    async def hello(self, ctx, members: commands.Greedy[discord.Member] = []):
-        if len(members) == 0:
+    async def hello(self, ctx, members: commands.Greedy[discord.Member] = None):
+        if members is None or len(members) == 0:
             members = [ctx.author]
         mentions = ' '.join(m.mention for m in members)
         await ctx.send(f'**Hello** {mentions}!')
