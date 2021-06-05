@@ -23,6 +23,8 @@ COMMAND_PREFIX = 'bp*'
 
 BOT_OWNER_ID = os.getenv('BOT_OWNER_ID')
 
-DB_URL = 'sqlite+aiosqlite:///database.db'
+# pysqlite for sync, aiosqlite for async
+DB_NAME = 'database'
+DB_URL = f'sqlite+aiosqlite:///{DB_NAME}.db'
 DB_ENGINE_KWARGS = dict(echo=True, future=True)
 
