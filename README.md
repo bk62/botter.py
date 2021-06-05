@@ -1,5 +1,4 @@
-# Basic Discord Bot
-
+# botter.py
 
 A more ambitious discord bot starting from basic-discord-bot ([github](https://github.com/bk62/basic-discord-bot), [replit](https://replit.com/@bk62/Basic-Discord-Bot?v=1))
 
@@ -12,7 +11,7 @@ WIP
 2. Review `settings.py`
 3. Run `python run.py initdb`
 4. Run `python run.py run`
-5. Run `$help` in your guild to view commands
+5. Run `bp*help` in your guild to view commands
 
 
 ### Key Ideas

@@ -17,7 +17,7 @@ EXTENSIONS = [extension for extension, enabled in ALL_EXTENSIONS.items() if enab
 
 TOKEN = os.getenv('TOKEN')
 
-COMMAND_PREFIX = '$'
+COMMAND_PREFIX = 'bp*'
 
 BOT_OWNER_ID = os.getenv('BOT_OWNER_ID')
 
