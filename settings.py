@@ -8,7 +8,7 @@ ALL_EXTENSIONS = {
     'extensions.admin': True,
 
     'extensions.encouragements': True,
-    'extensions.economy': True,
+    'economy': True,
 
     'extensions.greetings': True,
 }

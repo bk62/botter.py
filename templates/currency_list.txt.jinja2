@@ -1,0 +1,9 @@
+{% extends "base_list.txt.jinja2" %}
+
+{% block list %}
+```diff
+    {% for currency in object_list %}
++ {{ currency.name }} {{ currency.symbol }} (*Denominations:* {% for denom in currency.denominations %} {{ denom.name }} = {{ denom.value }} {% else %} None {% endfor %})
+    {% endfor %}
+```
+{% endblock %}
