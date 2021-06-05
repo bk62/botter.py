@@ -6,11 +6,20 @@ A more ambitious discord bot starting from basic-discord-bot ([github](https://g
 WIP
 
 
+### Quickstart
+
+1. Follow the instructions [here](https://discordpy.readthedocs.io/en/stable/discord.html) to get your token and bot owner id and store these in an env file or replit secrets
+2. Review `settings.py`
+3. Run `python run.py initdb`
+4. Run `python run.py run`
+5. Run `$help` in your guild to view commands
+
 ### Setup
 
 Store bot secret token and owner id in env vars called `TOKEN` and `BOT_OWNER_ID` respectively as in `.env.example` file.
 
 Command prefix and enabled extensions can be configured in settings.py
+
 
 ### Usage
 
