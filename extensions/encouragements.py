@@ -43,34 +43,37 @@ class Encouragements(commands.Cog, name='Encouragements'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
+    @commands.command(help='Fetch an inspiring quote from zenquotes.io')
     async def inspire(self, ctx):
         quote = await get_quote()
         await ctx.send(quote)
 
-    @commands.group(name='encourage')
+    @commands.group(
+        name='encourage',
+        help='Manage encouraging messages. List, add or delete custom messages.'
+        )
     async def encourage(self, ctx):
         pass
 
-    @encourage.command(name='active')
+    @encourage.command(name='active', help='Enable/Disable')
     async def responding(self, ctx, val: bool):
         db['responding'] = val
         status = 'on' if val else 'off'
         await ctx.send(f'Responding: {status}')
 
-    @encourage.command()
+    @encourage.command(help='List all messages.')
     async def list(self, ctx):
         encouragements = []
         if 'encouragements' in db.keys():
             encouragements = db['encouragements']
         await ctx.send(encouragements)
 
-    @encourage.command()
+    @encourage.command(help='Add a message to DB.')
     async def add(self, ctx, new_msg: str):
         update_encouragements(new_msg)
         await ctx.send('New message added.')
 
-    @encourage.command()
+    @encourage.command(help='Delete from DB.')
     async def delete(self, ctx, index: int):
         encouragements = []
         if 'encouragements' in db.keys():
