@@ -14,6 +14,7 @@ import typing
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser
 
 
+# Helpers
 def check_mentions_members(ctx):
     return ctx.mentions is not None and len(ctx.mentions) > 0
 
@@ -23,7 +24,32 @@ def parse_currency_from_spec(currency_spec):
     currency_dict = parser.parse()
     return currency_dict
 
+# replit db - default currency helpers
+def _channel_currency_key(channel_id):
+    return f'econ__channel_{channel_id}_dc'
 
+def set_default_guild_currency(symbol):
+    db.replit_db['econ__guild_dc'] = symbol
+
+def set_default_channel_currency(channel_id, symbol):
+    k = _channel_currency_key(channel_id)
+    db.replit_db[k] = symbol
+
+def get_default_guild_currency():
+    if 'econ__guild_dc' in db.replit_db.keys():
+        return db.replit_db['econ__guild_dc']
+
+def get_default_channel_currency(channel_id=None):
+    if channel_id is None:
+        return get_default_guild_currency()
+    k = _channel_currency_key(channel_id)
+    if k in db.replit_db.keys():
+        return db.replit_db[k]
+    return None
+
+
+#
+# Cogs
 class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only.'):
     @commands.group(
         name='currency', aliases=['cur'],
@@ -165,16 +191,49 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
 
     @currency.command(
         name='default',
-        usage="<currency_symbol>",
-        help="""Set currency as default for the guild or mentioned channels.
+        usage="no args or 'set_channel <currency_symbol> [@channel mentions]' or 'set_guild <currency_symbol>'",
+        help="""View or Set currency as default for the guild or mentioned channels.
                 
                 All payment and gambling commands that don't specify a currency
                 will use the default currency.
                 """,
         brief="Set default currency",
     )
-    async def default(self, ctx, symbol: str, channels: commands.Greedy[discord.TextChannel] = None):
-        await ctx.reply(symbol)
+    async def default(self, ctx, set_default: typing.Optional[str] = None, symbol: typing.Optional[str] = None, *, channels: commands.Greedy[discord.TextChannel] = None):
+        # TODO multiple channels not working properly
+        if isinstance(channels, discord.TextChannel):
+            channels = [channels]
+        if channels is None or len(channels) == 0:
+            channels = [ctx.channel]
+        if set_default == 'set_channel':
+            # set for channels
+            for c in channels:
+                set_default_channel_currency(c.id, symbol)
+            chs = [f'#{c.name}' for c in channels]
+            await ctx.reply(f'Set default channel currency to {symbol} for {chs}')
+            return
+        elif set_default == 'set_guild':
+            # set for guild
+            set_default_guild_currency(symbol)
+            await ctx.reply(f'Set default guild currency to {symbol}')
+            return
+        else:
+            # display defaults
+            gd = get_default_guild_currency()
+            gd = gd if gd is not None else 'None'
+            embed = {
+                'title': 'Default Currencies',
+                'description': f'Guild default: {gd}',
+                'fields': []
+            }
+            for c in channels:
+                s = get_default_channel_currency(c.id)
+                s = s if s is not None else 'None'
+                embed['fields'].append(dict(name=c.name, value=s))
+            await ctx.reply(embed=discord.Embed.from_dict(embed))
+            return
+
+
 
 
 class Economy(BaseCog, name='Economy: Wallet and Payments.'):

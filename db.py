@@ -2,6 +2,8 @@ from sqlalchemy import Table, Column, Integer, ForeignKey, String, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy import create_engine
+from replit import db as replit_db
+
 import settings
 
 Base = declarative_base()
