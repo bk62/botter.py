@@ -6,6 +6,8 @@ import db
 from economy import models
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import exc
+
 from util import render_template, BaseCog
 import typing
 
@@ -15,6 +17,11 @@ from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmou
 def check_mentions_members(ctx):
     return ctx.mentions is not None and len(ctx.mentions) > 0
 
+
+def parse_currency_from_spec(currency_spec):
+    parser = CurrencySpecParser(currency_spec)
+    currency_dict = parser.parse()
+    return currency_dict
 
 
 class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only.'):
@@ -35,10 +42,12 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
     )
     async def list(self, ctx, detailed: typing.Optional[bool] = False):
         async with db.async_session() as session:
+            # query currencies and denominations
             stmt = select(models.Currency).options(selectinload(models.Currency.denominations))
             res = await session.execute(stmt)
             currencies = res.scalars().all()
 
+            # if no currencies, send empty message and help on how to add one
             if len(currencies) == 0:
                 await ctx.reply(await render_template('empty_currency_list.jinja2'))
                 await ctx.send_help(self.add)
@@ -52,7 +61,7 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
                     ]
                 }
                 for c in currencies:
-                    embed['fields'].append({'name': f'{c.name} {c.symbol}', 'value': c.description})
+                    embed['fields'].append({'name': f'{c.name} {c.symbol}', 'value': f'{c.description}'})
                     for d in c.denominations:
                         embed['fields'].append(
                             {'name': f'{d.name}', 'value': str(d.value), 'inline': True}
@@ -73,12 +82,12 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
         brief="Add a currency",
     )
     async def add(self, ctx, *, currency_spec: str):
-        parser = CurrencySpecParser(currency_spec)
         try:
-            currency_dict = parser.parse()
+            # parse currency info from string
+            currency_dict = parse_currency_from_spec(currency_spec)
             currency = models.Currency.from_dict(currency_dict)
-            print(currency)
 
+            # save parsed info
             async with db.async_session() as session:
                 async with session.begin():
                     session.add(currency)
@@ -95,8 +104,42 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
         brief="Edit a currency",
     )
     async def edit(self, ctx, symbol: str, *, currency_spec: str):
-        await ctx.reply(currency_spec)
+        try:
+            async with db.async_session() as session:
+                async with session.begin():
+                    # get currency obj from db
+                    stmt = (select(models.Currency).
+                        where(models.Currency.symbol == symbol).
+                        options(selectinload(models.Currency.denominations)))
+                    res = await session.execute(stmt)
+                    currency = res.scalar_one() # raises exception if not found
 
+                    # parse info from string
+                    currency_dict = parse_currency_from_spec(currency_spec)
+                    
+                    # update found currency obj
+                    currency.name = currency_dict['name']
+                    currency.description = currency_dict['description']
+                    currency.symbol = currency_dict['symbol']
+
+                    # update denominations
+                    # - delete old ones
+                    # TODO delete not working
+                    for d in currency.denominations:
+                        session.delete(d)
+                    # - add new ones, if any
+                    ds = currency_dict.pop('denominations', {})
+                    for name, val in ds.items():
+                        denom = models.Denomination(name=name, value=val, currency=currency)
+                        session.add(denom)
+
+            await ctx.reply(f'Updated currency {currency.name} {currency.symbol}')
+        except SyntaxError as e:
+            await ctx.reply(f'Error parsing currency spec: {e.msg}')
+        except exc.NoResultFound:
+            # Not found
+            await ctx.reply(f'Error finding currency with symbol: {symbol}')
+        
     @currency.command(
         name='del', aliases=['d'],
         usage="<currency_symbol>",
