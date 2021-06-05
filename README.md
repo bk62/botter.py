@@ -14,6 +14,24 @@ WIP
 4. Run `python run.py run`
 5. Run `$help` in your guild to view commands
 
+
+### Key Ideas
+
+
+#### Project Structure
+
+I tried to structure the project so that  extension packages are analogous to `Django` apps. Specifically, as loosely coupled with their own models, cogs and commands that *ideally* can be reused.
+
+
+Settings are stored in a `settings.py` file.
+
+Management commands can be added to `run.py` using [click](https://click.palletsprojects.com/).
+
+#### Database
+#### Templating
+#### Parsing
+#### NLP
+
 ### Setup
 
 Store bot secret token and owner id in env vars called `TOKEN` and `BOT_OWNER_ID` respectively as in `.env.example` file.
@@ -50,16 +68,6 @@ Reset sqlitedb:
 `python run.py resetdb`
 
 
-### Project Structure
-
-I tried to structure the project so that  extension packages are analogous to `Django` apps. Specifically, as loosely coupled with their own models, cogs and commands that *ideally* can be reused.
-
-
-Settings are stored in a `settings.py` file.
-
-Management commands can be added to `run.py` using [click](https://click.palletsprojects.com/).
-
-
 
 ### Extensions
 - admin - manage `discord.py` extensions
@@ -73,14 +81,16 @@ Management commands can be added to `run.py` using [click](https://click.pallets
  - economy
  - nlp
 
+### TODO
+
+
+
+
 ### References
 
 + `basic-discord-bot` ([github](https://github.com/bk62/basic-discord-bot), [replit](https://replit.com/@bk62/Basic-Discord-Bot?v=1)) 
 + https://discordpy.readthedocs.io/en/latest
 + https://docs.sqlalchemy.org/
-
-### TODO
-
 
 
 ### License
