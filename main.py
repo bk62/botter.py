@@ -7,8 +7,9 @@ logging.basicConfig(level=logging.INFO)
 
 bot = commands.Bot(command_prefix=settings.COMMAND_PREFIX, case_insensitive=True)
 
-bot.author_id = int(settings.BOT_OWNER_ID)
-logging.info(f'Setting bot author id to {settings.BOT_OWNER_ID}')
+if settings.BOT_OWNER_ID is not None:
+    bot.author_id = int(settings.BOT_OWNER_ID)
+    logging.info(f'Setting bot author id to {settings.BOT_OWNER_ID}')
 
 
 @bot.event

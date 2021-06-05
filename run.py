@@ -4,7 +4,7 @@ from keep_alive import keep_alive as flask_keep_alive
 import main
 import db
 import click
-from replit import db
+from replit import db as replit_db
 
 
 
@@ -54,8 +54,8 @@ def resetdb():
 @cli.command('clearreplitdb')
 def cleardb():
     """Empty replit-db."""
-    for k in db.keys():
-        del db[k]
+    for k in replit_db.keys():
+        del replit_db[k]
 
 
 if __name__ == '__main__':
