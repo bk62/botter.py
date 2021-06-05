@@ -6,20 +6,18 @@ import db
 from economy import models
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from util import get_template
+from util import render_template, BaseCog
 import typing
 
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser
 
 
-class Economy(commands.Cog, name='Economy'):
-    def __init__(self, bot):
-        self.bot = bot
+def check_mentions_members(ctx):
+    return ctx.mentions is not None and len(ctx.mentions) > 0
 
-    @commands.command()
-    async def econ(self, ctx):
-        await ctx.reply('econ')
 
+
+class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only.'):
     @commands.group(
         name='currency', aliases=['cur'],
         help="Manage virtual currencies. List, create, edit and delete currencies.",
@@ -39,6 +37,12 @@ class Economy(commands.Cog, name='Economy'):
         async with db.async_session() as session:
             stmt = select(models.Currency).options(selectinload(models.Currency.denominations))
             res = await session.execute(stmt)
+            currencies = res.scalars().all()
+
+            if len(currencies) == 0:
+                await ctx.reply(await render_template('empty_currency_list.jinja2'))
+                await ctx.send_help(self.add)
+                return
 
             if detailed:
                 # embed currency details
@@ -47,7 +51,7 @@ class Economy(commands.Cog, name='Economy'):
                     'fields': [
                     ]
                 }
-                for c in res.scalars():
+                for c in currencies:
                     embed['fields'].append({'name': f'{c.name} {c.symbol}', 'value': c.description})
                     for d in c.denominations:
                         embed['fields'].append(
@@ -57,8 +61,8 @@ class Economy(commands.Cog, name='Economy'):
                 return
             else:
                 # Brief list
-                tmpl = get_template('currency_list.txt.jinja2')
-                text = await tmpl.render_async(title='Currencies:', object_list=res.scalars())
+                data = dict(title='Currencies:', object_list=currencies)
+                text = await render_template('currency_list.txt.jinja2', data)
                 await ctx.reply(text)
             return
 
@@ -115,7 +119,62 @@ class Economy(commands.Cog, name='Economy'):
     async def default(self, ctx, symbol: str, channels: commands.Greedy[discord.TextChannel] = None):
         await ctx.reply(symbol)
 
-    @currency.command(
+
+class Economy(BaseCog, name='Economy: Wallet and Payments.'):
+
+    #
+    # Admin commands:
+    @commands.group(
+        help="View and manage member wallets. Bot owner only.",
+        aliases=['economy']
+    )
+    async def econ(self, ctx):
+        if ctx.invoked_subcommand is None:
+            ctx.send_help(self.econ)
+
+    @econ.command(
+        help="View member wallets",
+        aliases=['wallet', 'view']
+    )
+    async def view_wallets(self, ctx, *, members: commands.Greedy[discord.Member] = None):
+        if not check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        for member in members:
+            # TODO
+            await ctx.reply(f"{member}'s wallet TODO")
+
+    @econ.command(
+        help="Deposit currency in member wallets",
+        aliases=['add']
+    )
+    async def deposit(self, ctx, *, members: commands.Greedy[discord.Member] = None):
+        if not check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        for member in members:
+            # TODO
+            await ctx.reply(f"Deposited amount into {member}'s wallet TODO")
+    
+    @econ.command(
+        help="Withdraw currency from member wallets",
+        aliases=['remove']
+    )
+    async def withdraw(self, ctx, *, members: commands.Greedy[discord.Member] = None):
+        if not check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        for member in members:
+            # TODO
+            await ctx.reply(f"Withdrew amount from {member}'s wallet TODO")
+
+    #
+    # Normal users:
+
+    @commands.command(
         name='wallet',
         usage="[<currency_symbol>]",
         help="""View wallet.
@@ -125,6 +184,17 @@ class Economy(commands.Cog, name='Economy'):
     async def wallet(self, ctx, symbol: typing.Optional[str] = 'all'):
         await ctx.reply(symbol)
 
+    @commands.command()
+    async def pay(self, ctx, amount: float, *, members: commands.Greedy[discord.Member] = None):
+        if not check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        for member in members:
+            # TODO
+            await ctx.reply(f"Payed amount to {member} from your wallet TODO")
+
+
 
 class Gambling(commands.Cog, name='Gambling'):
     def __init__(self, bot):
@@ -132,3 +202,9 @@ class Gambling(commands.Cog, name='Gambling'):
 
     def coinflip(self):
         return random.randint(0, 1)
+    
+    @commands.command(
+        help = 'Gamble.'
+    )
+    async def gamble(self, ctx, amount: float):
+        pass
