@@ -7,7 +7,7 @@ load_dotenv()
 ALL_EXTENSIONS = {
     'extensions.admin': True,
 
-    'extensions.encouragements': True,
+    # 'extensions.encouragements': True,
     'economy': True,
 
     'extensions.greetings': True,
