@@ -25,7 +25,7 @@ class Currency(Base):
 
     @classmethod
     def from_dict(cls, data_dict: dict):
-        denominations = data_dict.pop('denominations', [])
+        denominations = data_dict.pop('denominations', {})
         instance = cls(**data_dict)
         for name, val in denominations.items():
             denom = Denomination(name=name, value=val, currency=instance)
@@ -56,10 +56,12 @@ class CurrencyBalance(Base):
     id = Column(Integer, primary_key=True)
 
     currency_id = Column(Integer, ForeignKey('currency.id'))
-    balance = Column(Numeric(10, 2))
+    currency = relationship('Currency', lazy='selectin')
+
+    balance = Column(Numeric(10, 2), default=0.0)
 
     wallet_id = Column(Integer, ForeignKey('wallet.id'))
-    wallet = relationship('Wallet', backref='currency_balances', lazy='selectin')
+    wallet = relationship('Wallet', back_populates='currency_balances', lazy='selectin')
 
     # B/c of ext reloading - TODO
     __table_args__ = {'extend_existing': True}
@@ -72,6 +74,8 @@ class Wallet(Base):
 
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship('User', backref='wallet', lazy='selectin')
+
+    currency_balances = relationship('CurrencyBalance', back_populates='wallet', lazy='selectin')
 
     # B/c of ext reloading - TODO
     __table_args__ = {'extend_existing': True}

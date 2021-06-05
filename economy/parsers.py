@@ -37,6 +37,7 @@ CURRENCY_SPEC_DESC = """
 
                 E.g.
                 `currency HelpCoins HC; description "Get HelpCoins for answering questions. Use to unlock exclusive emojis.";`
+                `RaffleCoin RC; description "Win in raffles. Use to unlock exclusive reactions.";`
                 `Bitcoin BTC; description "The original cryptocurrency.";`
                 `USDollar USD; denominations grand 1000, dime 0.10, penny 0.01;`
                 """

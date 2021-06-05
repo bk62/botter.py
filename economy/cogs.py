@@ -48,6 +48,9 @@ def get_default_channel_currency(channel_id=None):
     return None
 
 
+# orm - member wallet helpers
+
+
 #
 # Cogs
 class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only.'):
@@ -205,17 +208,35 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
             channels = [channels]
         if channels is None or len(channels) == 0:
             channels = [ctx.channel]
+
+        # if set
+        # check if currency exists
+        if set_default == 'set_channel' or set_default == 'set_guild':
+            try:
+                async with db.async_session() as session:
+                    async with session.begin():
+                        # get currency obj from db
+                        stmt = (select(models.Currency).
+                            where(models.Currency.symbol == symbol).
+                            options(selectinload(models.Currency.denominations)))
+                        res = await session.execute(stmt)
+                        currency = res.scalar_one() # raises exception if not found
+            except exc.NoResultFound:
+                # Not found
+                await ctx.reply(f'Error finding currency with symbol: {symbol}')
+                return
+
         if set_default == 'set_channel':
             # set for channels
             for c in channels:
                 set_default_channel_currency(c.id, symbol)
             chs = [f'#{c.name}' for c in channels]
-            await ctx.reply(f'Set default channel currency to {symbol} for {chs}')
+            await ctx.reply(f'Set default channel currency to {currency.name} {symbol} for {chs}')
             return
         elif set_default == 'set_guild':
             # set for guild
             set_default_guild_currency(symbol)
-            await ctx.reply(f'Set default guild currency to {symbol}')
+            await ctx.reply(f'Set default guild currency to {currency.name} {symbol}')
             return
         else:
             # display defaults
@@ -249,7 +270,7 @@ class Economy(BaseCog, name='Economy: Wallet and Payments.'):
             ctx.send_help(self.econ)
 
     @econ.command(
-        help="View member wallets",
+        help="View member wallets STUB",
         aliases=['wallet', 'view']
     )
     async def view_wallets(self, ctx, *, members: commands.Greedy[discord.Member] = None):
@@ -262,7 +283,7 @@ class Economy(BaseCog, name='Economy: Wallet and Payments.'):
             await ctx.reply(f"{member}'s wallet TODO")
 
     @econ.command(
-        help="Deposit currency in member wallets",
+        help="Deposit currency in member wallets STUB",
         aliases=['add']
     )
     async def deposit(self, ctx, *, members: commands.Greedy[discord.Member] = None):
@@ -275,7 +296,7 @@ class Economy(BaseCog, name='Economy: Wallet and Payments.'):
             await ctx.reply(f"Deposited amount into {member}'s wallet TODO")
     
     @econ.command(
-        help="Withdraw currency from member wallets",
+        help="Withdraw currency from member wallets STUB",
         aliases=['remove']
     )
     async def withdraw(self, ctx, *, members: commands.Greedy[discord.Member] = None):
@@ -297,10 +318,75 @@ class Economy(BaseCog, name='Economy: Wallet and Payments.'):
                     """,
         brief="View wallet.",
     )
-    async def wallet(self, ctx, symbol: typing.Optional[str] = 'all'):
-        await ctx.reply(symbol)
+    async def wallet(self, ctx):
+        embed = {
+            'title': f'{ctx.author.display_name}\'s Wallet:',
+            'description': '',
+            'fields': []
+        }
+        
+        async with db.async_session() as session:
+            async with session.begin():
+                # get currency obj from db
+                stmt = (
+                    select(models.Wallet).
+                    where(models.Wallet.user_id == ctx.author.id).
+                    options(
+                        selectinload(models.Wallet.currency_balances).
+                        selectinload(models.CurrencyBalance.currency)
+                    )
+                )
+                res = await session.execute(stmt)
 
-    @commands.command()
+                try:
+                    wallet = res.scalar_one()
+                except exc.NoResultFound:
+                    # Not found
+                    # create a wallet for user
+                    u = db.User(id=ctx.author.id, name=ctx.author.display_name)
+                    wallet = models.Wallet(user=u)
+                    session.add(u)
+                    session.add(wallet)
+                    
+                    # query again - should work this time so no except blocks
+                    res = await session.execute(stmt)
+                    wallet = res.scalar_one()
+
+                    embed['description'] = f'Just created a new wallet for {ctx.author.display_name}'
+                        
+
+                # get all currencies to ensure any newly added currencies 
+                # are also added to the user's wallet, and deleted currencies
+                # are removed
+                all_currencies = await session.execute(select(models.Currency))
+                all_currencies = all_currencies.scalars().all()
+                all_currencies = set(all_currencies)
+                wallet_currencies = set()
+
+                # put balances for all currencies in wallet in embed
+                for b in wallet.currency_balances:
+                    c = b.currency
+                    if c not in all_currencies:
+                        # don't display removed currencies and delete em
+                        session.delete(b)
+                        continue
+                    n = f'{c.name} ({c.symbol})'
+                    embed['fields'].append(dict(name=n, value=f'{b.balance}'))
+                    wallet_currencies.add(c)
+                
+                # create and put balances for all currencies not in wallet in embed and session
+                for c in all_currencies - wallet_currencies:
+                    b = models.CurrencyBalance(wallet=wallet, currency=c)
+                    session.add(b)
+                    n = f'{c.name} ({c.symbol})'
+                    embed['fields'].append(dict(name=n, value=f'0.0'))
+                
+        # finally display wallet embed
+        await ctx.reply(embed=discord.Embed.from_dict(embed))
+
+    @commands.command(
+        help="Make payments from your wallet. STUB"
+    )
     async def pay(self, ctx, amount: float, *, members: commands.Greedy[discord.Member] = None):
         if not check_mentions_members(ctx):
             await ctx.send(
@@ -320,7 +406,7 @@ class Gambling(commands.Cog, name='Gambling'):
         return random.randint(0, 1)
     
     @commands.command(
-        help = 'Gamble.'
+        help = 'Gamble. STUB'
     )
     async def gamble(self, ctx, amount: float):
         pass
