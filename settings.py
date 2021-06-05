@@ -20,3 +20,7 @@ TOKEN = os.getenv('TOKEN')
 COMMAND_PREFIX = '$'
 
 BOT_OWNER_ID = os.getenv('BOT_OWNER_ID')
+
+DB_URL = 'sqlite+aiosqlite:///database.db'
+DB_ENGINE_KWARGS = dict(echo=True, future=True)
+
