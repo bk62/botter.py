@@ -124,9 +124,8 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
 
                     # update denominations
                     # - delete old ones
-                    # TODO delete not working
                     for d in currency.denominations:
-                        session.delete(d)
+                        await session.delete(d)
                     # - add new ones, if any
                     ds = currency_dict.pop('denominations', {})
                     for name, val in ds.items():
@@ -146,8 +145,23 @@ class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only
         help="""Delete a currency.\n""" + CURRENCY_SPEC_DESC,
         brief="Delete a currency",
     )
-    async def delete(self, ctx, symbol: str, *, currency_spec: str):
-        await ctx.reply(currency_spec)
+    async def delete(self, ctx, symbol: str):
+        try:
+            async with db.async_session() as session:
+                async with session.begin():
+                    # get currency obj from db
+                    stmt = (select(models.Currency).
+                        where(models.Currency.symbol == symbol).
+                        options(selectinload(models.Currency.denominations)))
+                    res = await session.execute(stmt)
+                    currency = res.scalar_one() # raises exception if not found
+
+                    await session.delete(currency)
+
+            await ctx.reply(f'Deleted currency {currency.name} {currency.symbol}')
+        except exc.NoResultFound:
+            # Not found
+            await ctx.reply(f'Error finding currency with symbol: {symbol}')
 
     @currency.command(
         name='default',
