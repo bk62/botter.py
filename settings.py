@@ -8,9 +8,11 @@ ALL_EXTENSIONS = {
     'extensions.admin': True,
 
     # 'extensions.encouragements': True,
+
     'economy': True,
 
     'extensions.greetings': True,
+    'extensions.guessing_game': True,
 }
 
 EXTENSIONS = [extension for extension, enabled in ALL_EXTENSIONS.items() if enabled]
