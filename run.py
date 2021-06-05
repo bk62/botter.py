@@ -4,6 +4,8 @@ from keep_alive import keep_alive as flask_keep_alive
 import main
 import db
 import click
+from replit import db
+
 
 
 @click.group()
@@ -48,6 +50,12 @@ def dropdb():
 def resetdb():
     """Reset all tables."""
     asyncio.run(_run_db(init=True, drop=True))
+
+@cli.command('clearreplitdb')
+def cleardb():
+    """Empty replit-db."""
+    for k in db.keys():
+        del db[k]
 
 
 if __name__ == '__main__':

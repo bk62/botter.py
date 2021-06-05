@@ -1,2 +1,2 @@
-run="python run.py --keep-alive"
+run="python run.py  run --keep-alive"
 language="python3"
