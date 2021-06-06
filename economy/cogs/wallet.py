@@ -2,11 +2,13 @@ import re
 import typing
 
 import discord
+from dataclasses import dataclass
+
 from discord.ext import commands
 import db
 from economy import models
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import exc
 
 from util import render_template, BaseCog
@@ -15,23 +17,38 @@ from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmou
 from economy import util
 
 
+class WalletOpFailedException(Exception):
+    pass
+
+
+@dataclass
+class WalletData:
+    wallet: models.Wallet
+    embed: dict
+    new: bool
+
+
 class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
 
 
     # Helpers
-    async def get_or_create_wallet_embed(self, user):
+    @staticmethod
+    async def get_or_create_wallet_embed(user):
         """
         Get a user's wallet serialized into an embed dictionary.
         
         If the user does not have a wallet, create one.
 
         Also, handles creating and/or deleting wallet balances associated with currencies added and/or removed since the last time the wallet was updated.
+
+        TODO - refactor
         """
         embed = {
             'title': f'{user.display_name}\'s Wallet:',
             'description': '',
             'fields': []
         }
+        new = False
         async with db.async_session() as session:
             async with session.begin():
                 # get currency obj from db
@@ -60,6 +77,7 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                     wallet = res.scalar_one()
 
                     embed['description'] = f'Just created a new wallet for {user.display_name}'
+                    new = True
 
                 # get all currencies to ensure any newly added currencies
                 # are also added to the user's wallet, and deleted currencies
@@ -87,7 +105,70 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                     n = f'{c.name} ({c.symbol})'
                     embed['fields'].append(dict(name=n, value=f'0.0'))
 
-        return wallet, embed
+        return WalletData(wallet=wallet, embed=embed, new=new)
+    
+
+    @staticmethod
+    async def get_balance(session, user_id, currency_symbol):
+        # Raises exc.NoResultFound
+        # Run in session context
+        stmt = (
+            select(models.CurrencyBalance).
+            join(models.CurrencyBalance.wallet).
+            where(models.Wallet.user_id == user_id).
+            join(models.CurrencyBalance.currency).
+            where(models.Currency.symbol == currency_symbol).
+            options(
+                joinedload(models.CurrencyBalance.currency)
+            )
+        )
+        res = await session.execute(stmt)
+
+        balance = res.scalar_one()
+
+        return balance
+
+    @staticmethod
+    async def deposit_in_wallet(user_id, currency_symbol, amount):
+        # assuming user already has an up to date wallet at this point
+        async with db.async_session() as session:
+            async with session.begin():
+                try :
+                    balance = await Wallet.get_balance(session, user_id, currency_symbol)
+                    balance.balance += amount
+                except exc.NoResultFound as e:
+                    raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
+
+
+    @staticmethod
+    async def withdraw_from_wallet(user_id, currency_symbol, amount):
+        # assuming user already has an up to date wallet at this point
+        async with db.async_session() as session:
+            async with session.begin():
+                try :
+                    balance = await Wallet.get_balance(session, user_id, currency_symbol)
+                    if balance.balance < amount:
+                        raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
+                    balance.balance -= amount
+                except exc.NoResultFound:
+                    raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
+
+    @staticmethod
+    async def make_payment(sender_id, receiver_id, currency_symbol, amount):
+        # assuming user already has an up to date wallet at this point
+        async with db.async_session() as session:
+            async with session.begin():
+                # both ops in same transaction
+                # so both are rolled back if sth goes wrong
+                try :
+                    sender_balance = await Wallet.get_balance(session, sender_id, currency_symbol)
+                    receiver_balance = await Wallet.get_balance(session, receiver_id, currency_symbol)
+                    if sender_balance.balance < amount:
+                        raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {sender_balance.balance}')
+                    sender_balance.balance -= amount
+                    receiver_balance.balance += amount
+                except exc.NoResultFound:
+                    raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
 
     #
     # Admin commands:
@@ -100,7 +181,7 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
             ctx.send_help(self.econ)
 
     @econ.command(
-        help="View member wallets STUB",
+        help="View member wallets",
         aliases=['wallet', 'view']
     )
     async def view_wallets(self, ctx, *, members: commands.Greedy[discord.Member] = None):
@@ -112,35 +193,60 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
             # only one member
             members = [members]
         for member in members:
-            _, embed = await self.get_or_create_wallet_embed(member)
-            await ctx.reply(embed=discord.Embed.from_dict(embed))
+            wallet_data = await self.get_or_create_wallet_embed(member)
+            await ctx.reply(embed=discord.Embed.from_dict(wallet_data.embed))
 
     @econ.command(
-        help="Deposit currency in member wallets STUB",
+        help="Deposit currency in member wallets",
+        usage="<@member mentions> <currency_amount>",
         aliases=['add']
     )
-    async def deposit(self, ctx, currency_str: str, members: commands.Greedy[discord.Member] = None):
+    async def deposit(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: str):
         if not util.check_mentions_members(ctx):
             await ctx.send(
                 f'Invalid: You must specify users by mentioning them.')
             return
+        if isinstance(members, discord.Member):
+            # only one member
+            members = [members]
         for member in members:
             # TODO
             amount = 1
-            await ctx.reply(f"Deposited amount {amount} into {member.display}'s wallet TODO")
+            currency_symbol = 'USD'
+            # make sure they have a wallet
+            await self.get_or_create_wallet_embed(member)
+            # deposit amount
+            try:
+                await self.deposit_in_wallet(member.id, currency_symbol, amount)
+                await ctx.reply(f"Deposited amount {amount} {currency_symbol} into {member.display_name}'s wallet TODO")
+            except WalletOpFailedException as e:
+                await ctx.reply(f"Failed to deposited amount {amount} {currency_symbol} into {member.display_name}'s wallet: {e}")
 
     @econ.command(
-        help="Withdraw currency from member wallets STUB",
+        help="Withdraw currency from member wallets",
+        usage="<@member mentions> <currency_amount>",
         aliases=['remove']
     )
-    async def withdraw(self, ctx, *, members: commands.Greedy[discord.Member] = None):
+    async def withdraw(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: str):
         if not util.check_mentions_members(ctx):
             await ctx.send(
                 f'Invalid: You must specify users by mentioning them.')
             return
+        if isinstance(members, discord.Member):
+            # only one member
+            members = [members]
         for member in members:
             # TODO
-            await ctx.reply(f"Withdrew amount from {member}'s wallet TODO")
+            amount = 1
+            currency_symbol = 'USD'
+            # make sure they have a wallet
+            await self.get_or_create_wallet_embed(member)
+            # withdraw amount
+            try:
+                await self.withdraw_from_wallet(member.id, currency_symbol, amount)
+                await ctx.reply(f"Withdrew {amount} {currency_symbol} from {member.display_name}'s wallet TODO")
+            except WalletOpFailedException as e:
+                await ctx.reply(f"Failed to withdraw {amount} {currency_symbol} from {member.display_name}'s wallet: {e}")
 
     #
     # Normal users:
@@ -153,18 +259,33 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
         brief="View your wallet.",
     )
     async def wallet(self, ctx):
-        _, embed = await self.get_or_create_wallet_embed(ctx.author)
-        await ctx.reply(embed=discord.Embed.from_dict(embed))
+        wallet_data = await self.get_or_create_wallet_embed(ctx.author)
+        await ctx.reply(embed=discord.Embed.from_dict(wallet_data.embed))
     
 
     @commands.command(
-        help="Make payments from your wallet. STUB"
+        help="Make payments from your wallet."
     )
-    async def pay(self, ctx, amount: float, *, members: commands.Greedy[discord.Member] = None):
+    async def pay(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: str):
         if not util.check_mentions_members(ctx):
             await ctx.send(
                 f'Invalid: You must specify users by mentioning them.')
             return
+        if isinstance(members, discord.Member):
+            # only one member
+            members = [members]
+        # make sure sender has a wallet
+        await self.get_or_create_wallet_embed(ctx.author)
+        sender_id = ctx.author.id
         for member in members:
             # TODO
-            await ctx.reply(f"Payed amount to {member} from your wallet TODO")
+            amount = int(currency_str)
+            currency_symbol = 'USD'
+            # make sure they have a wallet
+            await self.get_or_create_wallet_embed(member)
+            # pay amount
+            try:
+                await self.make_payment(sender_id, member.id, currency_symbol, amount)
+                await ctx.reply(f"Made payment of {amount} {currency_symbol} from {ctx.author.display_name} to {member.display_name} TODO")
+            except WalletOpFailedException as e:
+                await ctx.reply(f"Failed to make payment of {amount} {currency_symbol} from {ctx.author.display_name} to {member.display_name}: {e}")
