@@ -1,4 +1,4 @@
-from .cogs import Currency, Economy, Gambling
+from .cogs import Currency, Wallet, Gambling
 from db import Base, engine
 import asyncio
 
@@ -13,5 +13,5 @@ def setup(bot):
     # Base.metadata.clear() # TODO
 
     bot.add_cog(Currency(bot))
-    bot.add_cog(Economy(bot))
+    bot.add_cog(Wallet(bot))
     bot.add_cog(Gambling(bot))
