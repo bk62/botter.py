@@ -218,9 +218,6 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
         aliases=['add']
     )
     async def deposit(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: str):
-        currency_amount = await self.currency_amount_from_str(currency_str)
-        await ctx.reply(f'Parsed amount: {currency_amount}')
-        return
         if not util.check_mentions_members(ctx):
             await ctx.send(
                 f'Invalid: You must specify users by mentioning them.')
@@ -229,17 +226,17 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
             # only one member
             members = [members]
         for member in members:
-            # TODO
-            amount = 1
-            currency_symbol = 'USD'
             # make sure they have a wallet
             await self.get_or_create_wallet_embed(member)
             # deposit amount
             try:
+                currency_amount = await self.currency_amount_from_str(currency_str)
+                amount = currency_amount.amount
+                currency_symbol = currency_amount.symbol
                 await self.deposit_in_wallet(member.id, currency_symbol, amount)
-                await ctx.reply(f"Deposited amount {amount} {currency_symbol} into {member.display_name}'s wallet TODO")
+                await ctx.reply(f"Deposited amount {currency_amount} into {member.display_name}'s wallet")
             except WalletOpFailedException as e:
-                await ctx.reply(f"Failed to deposited amount {amount} {currency_symbol} into {member.display_name}'s wallet: {e}")
+                await ctx.reply(f"Failed to deposited amount {currency_amount} into {member.display_name}'s wallet: {e}")
 
     @econ.command(
         help="Withdraw currency from member wallets",
@@ -255,17 +252,17 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
             # only one member
             members = [members]
         for member in members:
-            # TODO
-            amount = 1
-            currency_symbol = 'USD'
             # make sure they have a wallet
             await self.get_or_create_wallet_embed(member)
             # withdraw amount
             try:
+                currency_amount = await self.currency_amount_from_str(currency_str)
+                amount = currency_amount.amount
+                currency_symbol = currency_amount.symbol
                 await self.withdraw_from_wallet(member.id, currency_symbol, amount)
-                await ctx.reply(f"Withdrew {amount} {currency_symbol} from {member.display_name}'s wallet TODO")
+                await ctx.reply(f"Withdrew {currency_amount} from {member.display_name}'s wallet")
             except WalletOpFailedException as e:
-                await ctx.reply(f"Failed to withdraw {amount} {currency_symbol} from {member.display_name}'s wallet: {e}")
+                await ctx.reply(f"Failed to withdraw {currency_amount} from {member.display_name}'s wallet: {e}")
 
     #
     # Normal users:
@@ -297,14 +294,14 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
         await self.get_or_create_wallet_embed(ctx.author)
         sender_id = ctx.author.id
         for member in members:
-            # TODO
-            amount = int(currency_str)
-            currency_symbol = 'USD'
             # make sure they have a wallet
             await self.get_or_create_wallet_embed(member)
             # pay amount
             try:
+                currency_amount = await self.currency_amount_from_str(currency_str)
+                amount = currency_amount.amount
+                currency_symbol = currency_amount.symbol
                 await self.make_payment(sender_id, member.id, currency_symbol, amount)
-                await ctx.reply(f"Made payment of {amount} {currency_symbol} from {ctx.author.display_name} to {member.display_name} TODO")
+                await ctx.reply(f"Made payment of {currency_amount} from {ctx.author.display_name} to {member.display_name}")
             except WalletOpFailedException as e:
-                await ctx.reply(f"Failed to make payment of {amount} {currency_symbol} from {ctx.author.display_name} to {member.display_name}: {e}")
+                await ctx.reply(f"Failed to make payment of {currency_amount} from {ctx.author.display_name} to {member.display_name}: {e}")
