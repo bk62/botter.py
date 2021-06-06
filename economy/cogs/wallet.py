@@ -1,3 +1,6 @@
+import re
+import typing
+
 import discord
 from discord.ext import commands
 import db
@@ -7,86 +10,34 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import exc
 
 from util import render_template, BaseCog
-import typing
 
-from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser
+from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser, re_decimal_value
 from economy import util
 
 
 class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
 
-    #
-    # Admin commands:
-    @commands.group(
-        help="View and manage member wallets. Bot owner only.",
-        aliases=['economy']
-    )
-    async def econ(self, ctx):
-        if ctx.invoked_subcommand is None:
-            ctx.send_help(self.econ)
 
-    @econ.command(
-        help="View member wallets STUB",
-        aliases=['wallet', 'view']
-    )
-    async def view_wallets(self, ctx, *, members: commands.Greedy[discord.Member] = None):
-        if not util.check_mentions_members(ctx):
-            await ctx.send(
-                f'Invalid: You must specify users by mentioning them.')
-            return
-        for member in members:
-            # TODO
-            await ctx.reply(f"{member}'s wallet TODO")
+    # Helpers
+    async def get_or_create_wallet_embed(self, user):
+        """
+        Get a user's wallet serialized into an embed dictionary.
+        
+        If the user does not have a wallet, create one.
 
-    @econ.command(
-        help="Deposit currency in member wallets STUB",
-        aliases=['add']
-    )
-    async def deposit(self, ctx, *, members: commands.Greedy[discord.Member] = None):
-        if not util.check_mentions_members(ctx):
-            await ctx.send(
-                f'Invalid: You must specify users by mentioning them.')
-            return
-        for member in members:
-            # TODO
-            await ctx.reply(f"Deposited amount into {member}'s wallet TODO")
-
-    @econ.command(
-        help="Withdraw currency from member wallets STUB",
-        aliases=['remove']
-    )
-    async def withdraw(self, ctx, *, members: commands.Greedy[discord.Member] = None):
-        if not util.check_mentions_members(ctx):
-            await ctx.send(
-                f'Invalid: You must specify users by mentioning them.')
-            return
-        for member in members:
-            # TODO
-            await ctx.reply(f"Withdrew amount from {member}'s wallet TODO")
-
-    #
-    # Normal users:
-
-    @commands.command(
-        name='wallet',
-        usage="[<currency_symbol>]",
-        help="""View wallet.
-                    """,
-        brief="View wallet.",
-    )
-    async def wallet(self, ctx):
+        Also, handles creating and/or deleting wallet balances associated with currencies added and/or removed since the last time the wallet was updated.
+        """
         embed = {
-            'title': f'{ctx.author.display_name}\'s Wallet:',
+            'title': f'{user.display_name}\'s Wallet:',
             'description': '',
             'fields': []
         }
-
         async with db.async_session() as session:
             async with session.begin():
                 # get currency obj from db
                 stmt = (
                     select(models.Wallet).
-                        where(models.Wallet.user_id == ctx.author.id).
+                        where(models.Wallet.user_id == user.id).
                         options(
                         selectinload(models.Wallet.currency_balances).
                             selectinload(models.CurrencyBalance.currency)
@@ -99,7 +50,7 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                 except exc.NoResultFound:
                     # Not found
                     # create a wallet for user
-                    u = db.User(id=ctx.author.id, name=ctx.author.display_name)
+                    u = db.User(id=user.id, name=user.display_name)
                     wallet = models.Wallet(user=u)
                     session.add(u)
                     session.add(wallet)
@@ -108,7 +59,7 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                     res = await session.execute(stmt)
                     wallet = res.scalar_one()
 
-                    embed['description'] = f'Just created a new wallet for {ctx.author.display_name}'
+                    embed['description'] = f'Just created a new wallet for {user.display_name}'
 
                 # get all currencies to ensure any newly added currencies
                 # are also added to the user's wallet, and deleted currencies
@@ -136,8 +87,75 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                     n = f'{c.name} ({c.symbol})'
                     embed['fields'].append(dict(name=n, value=f'0.0'))
 
-        # finally display wallet embed
+        return wallet, embed
+
+    #
+    # Admin commands:
+    @commands.group(
+        help="View and manage member wallets. Bot owner only.",
+        aliases=['economy']
+    )
+    async def econ(self, ctx):
+        if ctx.invoked_subcommand is None:
+            ctx.send_help(self.econ)
+
+    @econ.command(
+        help="View member wallets STUB",
+        aliases=['wallet', 'view']
+    )
+    async def view_wallets(self, ctx, *, members: commands.Greedy[discord.Member] = None):
+        if not util.check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        if isinstance(members, discord.Member):
+            # only one member
+            members = [members]
+        for member in members:
+            _, embed = await self.get_or_create_wallet_embed(member)
+            await ctx.reply(embed=discord.Embed.from_dict(embed))
+
+    @econ.command(
+        help="Deposit currency in member wallets STUB",
+        aliases=['add']
+    )
+    async def deposit(self, ctx, currency_str: str, members: commands.Greedy[discord.Member] = None):
+        if not util.check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        for member in members:
+            # TODO
+            amount = 1
+            await ctx.reply(f"Deposited amount {amount} into {member.display}'s wallet TODO")
+
+    @econ.command(
+        help="Withdraw currency from member wallets STUB",
+        aliases=['remove']
+    )
+    async def withdraw(self, ctx, *, members: commands.Greedy[discord.Member] = None):
+        if not util.check_mentions_members(ctx):
+            await ctx.send(
+                f'Invalid: You must specify users by mentioning them.')
+            return
+        for member in members:
+            # TODO
+            await ctx.reply(f"Withdrew amount from {member}'s wallet TODO")
+
+    #
+    # Normal users:
+
+    @commands.command(
+        name='wallet',
+        usage="",
+        help="""View your wallet.
+                    """,
+        brief="View your wallet.",
+    )
+    async def wallet(self, ctx):
+        _, embed = await self.get_or_create_wallet_embed(ctx.author)
         await ctx.reply(embed=discord.Embed.from_dict(embed))
+    
 
     @commands.command(
         help="Make payments from your wallet. STUB"

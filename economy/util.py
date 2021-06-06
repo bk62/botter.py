@@ -4,7 +4,7 @@ from .parsers import CurrencySpecParser
 
 # Helpers
 def check_mentions_members(ctx):
-    return ctx.mentions is not None and len(ctx.mentions) > 0
+    return ctx.message.mentions is not None and len(ctx.message.mentions) > 0
 
 
 # Parsing
