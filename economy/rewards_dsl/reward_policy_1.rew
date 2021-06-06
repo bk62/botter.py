@@ -1,0 +1,42 @@
+
+// no condition
+rule join_bonus
+    event member join
+    reward 1 BTC to member
+end
+
+//#
+
+// one condition
+rule cheer_up
+    event message send
+    conditions [
+        content *= 'sad' and not content *= 'happy'
+    ]
+    reward 1 BTC to author
+end
+
+//#
+
+// multiple conditions
+rule polite_bonus
+    event message send
+    conditions [
+        content *= 'hi' and channel == 'general',
+        content *= 'thank' and channel == 'help'
+    ]
+    reward 1 BTC to author
+end
+
+//#
+
+// multiple rewards
+rule help_bonus
+    event message send
+    conditions [
+        reply == true and channel == 'help' or content *= 'welcome'
+    ]
+    reward 1 BTC to original_author
+    reward 1 BTC to author
+end
+

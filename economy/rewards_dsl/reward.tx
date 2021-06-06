@@ -1,0 +1,97 @@
+Policy:
+    /* Root rule */
+    rules*=Rule // Define rules
+;
+
+
+
+Rule:
+    'rule' name=ID
+        event=Event
+        conditions=Condition
+        rewards+=Reward
+    'end'
+;
+
+Event: 'event' name=EventName type=EventType;
+
+
+EventName:
+    'member' |  'message' | 'reaction'
+;
+
+EventType:
+    // Member                   Msg                         Reaction
+    'join' | 'leave' | 'ban' | 'send' | 'delete' | 'edit' | 'add' | 'remove' | 'clear'
+;
+
+
+
+Condition:
+     'conditions' '['
+        statements += Statement [',']
+    ']'
+;
+
+Statement: firstExpr=Expression (operators=AndOrOp exprs=Expression)*;
+
+Expression: notOp=NotOp? sub1=Subject op=Operator sub2=Subject;
+
+NotOp: 'not';
+
+AndOrOp: 'and' | 'or';
+
+Subject: Attribute | Value;
+
+Attribute:
+
+    name =
+    // examples
+    'content'  | 'channel' | 'reply' | 'original_author' |
+    'original_message'
+    // general pattern
+     /[a-zA-z_0-9]+/
+;
+
+Operator:
+    // String only:
+    // ignores case!
+    // contains
+    '*=' |
+    // contains whitespace separated
+    '~=' |
+    // starts with
+    '^=' |
+    // ends with
+    '$=' |
+    // exact string match -- after converting to lowercase
+    '|=' |
+
+    //
+    // equal
+    '==' |
+    // not equal
+    '!='
+;
+
+
+Value:
+    NUMBER | BOOL | STRING
+;
+
+
+Reward:
+    'reward' currency_amount=CurrencyAmount 'to' user=User
+;
+
+CurrencyAmount:
+    amount=INT code=/[a-zA-z]{1,3}/
+;
+
+User:
+    'member' | 'author' | 'original_author' | /[a-zA-z_]+/
+;
+
+Comment:
+    /\/\*(.|\n)*?\*\// | /\/\/.*?$/
+;

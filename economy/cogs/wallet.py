@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import exc
 
 import db
-from util import render_template, BaseCog
+from util import render_template
 
 from economy import models, queries, util
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser, re_decimal_value
@@ -26,8 +26,9 @@ class WalletData:
     new: bool
 
 
-class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
-
+class Wallet(commands.Cog, name='Economy: Wallet and Payments.'):
+    def __init__(self, bot):
+        self.bot = bot
 
     # Helpers
     @staticmethod

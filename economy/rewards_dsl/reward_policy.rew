@@ -1,0 +1,7 @@
+rule cheer_up
+    event message send
+    conditions [
+        content *= 'sad' and not content *= 'happy'
+    ]
+    reward 1 USD to author
+end
