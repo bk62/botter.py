@@ -1,8 +1,11 @@
 from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, BigInteger
 from sqlalchemy.orm import relationship
+
+
 from db import Base
 
 
+# Models:
 class Currency(Base):
     __tablename__ = 'currency'
 
@@ -82,3 +85,5 @@ class Wallet(Base):
 
     def __repr__(self):
         return f"Wallet(user={self.user.name})"
+
+

@@ -1,6 +1,9 @@
-import db
-from .parsers import CurrencySpecParser
+from dataclasses import dataclass
+from decimal import Decimal
 
+import db
+from .parsers import CurrencySpecParser, CurrencyAmountParser
+from .models import Currency
 
 # Helpers
 def check_mentions_members(ctx):
@@ -13,6 +16,11 @@ def parse_currency_from_spec(currency_spec):
     parser = CurrencySpecParser(currency_spec)
     currency_dict = parser.parse()
     return currency_dict
+
+def parse_currency_amounts(currency_str):
+    parser = CurrencyAmountParser(currency_str)
+    amounts = parser.parse()
+    return amounts
 
 
 # replit db - default currency helpers
@@ -42,4 +50,27 @@ def get_default_channel_currency(channel_id=None):
         return db.replit_db[k]
     return None
 
-# orm - member wallet helpers
+# currency and orm helpers
+
+@dataclass
+class CurrencyAmount:
+    """An amount of specific currency."""
+    amount: Decimal
+    symbol: str
+    currency: Currency
+
+    @classmethod
+    def from_amounts(cls, amounts, currency: Currency):
+        denom_vals = {
+            denom.name: denom.value
+            for denom in currency.denominations
+        }
+        total = sum(
+            Decimal(amount_item.amount) if not amount_item.is_denomination else Decimal(amount_item.amount) * denom_vals[amount_item.type]
+            for amount_item in amounts
+        )
+        return cls(symbol=currency.symbol, amount=total, currency=currency)
+    
+
+    def __str__(self):
+        return f'{self.amount} {self.symbol}'

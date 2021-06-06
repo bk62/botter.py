@@ -1,20 +1,18 @@
 import re
 import typing
-
-import discord
 from dataclasses import dataclass
 
+import discord
 from discord.ext import commands
-import db
-from economy import models
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import exc
 
+import db
 from util import render_template, BaseCog
 
+from economy import models, queries, util
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser, re_decimal_value
-from economy import util
 
 
 class WalletOpFailedException(Exception):
@@ -150,7 +148,7 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                     if balance.balance < amount:
                         raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
                     balance.balance -= amount
-                except exc.NoResultFound:
+                except exc.NoResultFound as e:
                     raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
 
     @staticmethod
@@ -167,8 +165,26 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
                         raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {sender_balance.balance}')
                     sender_balance.balance -= amount
                     receiver_balance.balance += amount
-                except exc.NoResultFound:
+                except exc.NoResultFound as e:
                     raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
+
+    @staticmethod
+    async def currency_amount_from_str(currency_str):
+        # [(denom|symbol, val),] 
+        amounts = util.parse_currency_amounts(currency_str)
+        # [denom|symbol,]
+        denoms = [a.type for a in amounts]
+        stmt = queries.currency_from_denoms(denoms)
+        # query db for matching currency
+        async with db.async_session() as session:
+            try:
+                res = await session.execute(stmt)
+                currency = res.unique().scalar_one()
+            except exc.NoResultFound:
+                raise WalletOpFailedException('Invalid currency string: No matching currency')
+            except exc.MultipleResultsFound:
+                raise WalletOpFailedException('Invalid currency string: Matches multiple currencies') # TODO not clear error- better to display list of matches
+            return util.CurrencyAmount.from_amounts(amounts, currency)
 
     #
     # Admin commands:
@@ -202,6 +218,9 @@ class Wallet(BaseCog, name='Economy: Wallet and Payments.'):
         aliases=['add']
     )
     async def deposit(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: str):
+        currency_amount = await self.currency_amount_from_str(currency_str)
+        await ctx.reply(f'Parsed amount: {currency_amount}')
+        return
         if not util.check_mentions_members(ctx):
             await ctx.send(
                 f'Invalid: You must specify users by mentioning them.')
