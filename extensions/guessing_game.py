@@ -19,20 +19,20 @@ class GuessingGame(commands.Cog, name="Free guessing game -- with nothing at sta
             pass
 
     @commands.command(
-      name='guess_now',
+      name='free_guess_now',
       help='Guess a random number from 1-9',
     )
-    async def guess_now(self, ctx, num: int):
+    async def free_guess_now(self, ctx, num: int):
         answer = random.randint(1, 9)
         correct = num == answer
         await self.tick(ctx, correct)
         await ctx.reply('Correct!' if correct else f'Incorrect. The answer is {answer}', mention_author=True)
 
     @commands.command(
-      name='guess',
+      name='free_guess',
       help='Guess a random number between 1-99 or a provided range.'
     )
-    async def guess(self, ctx, start: typing.Optional[int] = 1, end: typing.Optional[int]= 99):
+    async def free_guess(self, ctx, start: typing.Optional[int] = 1, end: typing.Optional[int]= 99):
         await ctx.send(f'Guess a number between {start}-{end}')
 
         def is_correct(m):
