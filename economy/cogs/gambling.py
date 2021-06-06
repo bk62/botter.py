@@ -19,11 +19,20 @@ class Gambling(commands.Cog, name='Economy.Gambling'):
     def __init__(self, bot):
         self.bot = bot
 
-    def coinflip(self):
-        return random.randint(0, 1)
-
     @commands.command(
-        help='Gamble. STUB'
+        help='Gamble on a coin flip. STUB'
     )
-    async def gamble(self, ctx, amount: float):
+    async def coinflip(self, ctx, currency_str: str):
+        pass
+    
+    @commands.command(
+        help='Single-player. Wager on a guessing game. Guess a number between 1-9.'
+    )
+    async def guess_now(self, ctx, guess: int, *, currency_str: str):
+        pass
+    
+    @commands.command(
+        help='Multiplayer winner takes all. Wager on a guessing game. Guess a number between 1-99. Pot grows larger if noone wins.'
+    )
+    async def guess(self, ctx, *, currency_str: str):
         pass

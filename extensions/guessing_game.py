@@ -7,7 +7,7 @@ import typing
 
 
 # https://github.com/Rapptz/discord.py/blob/v1.7.2/examples/guessing_game.py
-class GuessingGame(commands.Cog, name="Guessing game"):
+class GuessingGame(commands.Cog, name="Free guessing game -- with nothing at stake."):
     def __init__(self, bot):
         self.bot = bot
     
