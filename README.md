@@ -26,11 +26,11 @@ WIP
 
 ### Parsing
 
-I think one of the more interesting things I could try to do when developing a discord bot is try figure out ways to use custom syntaxes and parsers to help make these bot more useful without making it too complicated.
+I think one of the more interesting things I could try to do with a discord bot is try figure out ways to use custom syntaxes and parsers to help make these bot more useful without making it too complicated.
 
-`discord.py` provides convenient command argument parsing but lots of nesting can become convoluted and perplexing.
+`discord.py` provides convenient and expressive command argument parsing but lots of nesting can become convoluted and perplexing. Especially since I planned to add CRUD functionality, I needed ways to get structured user input comparable to using web forms or AJAX POSTS with JSON.
 
-For example, I wanted to add the ability to create, update and delete virtual currencies. A simple model for a virtual currency is,
+For example, I wanted to add the ability to create, update and delete virtual currencies. A simple model for a virtual currency is;
 
 ```
 currency: {
@@ -38,11 +38,11 @@ currency: {
 }
 ```
 
-Using bot commands, I needed a way to get structured user input comparable to using web forms. Using command arguments a solution could be:
+Using command arguments a solution could be:
 
 `bp*currency add <name> <code> <symbol> <description>`
 
-Which is fine but what if I wanted to add more fields and/or related models (corresponding to embedded formsets in django for example). Specifically, for this project, I also wanted to add the ability to parse strings containing currency denominations (e.g. "1 buck, 2 quarters, 3 cents") which meant that I had to add denominations data to the database. Which would mean I had to implement complicated nesting or the user had to run multiple commands to add a single virtual currency.
+Which is fine but what if I wanted to add more fields and/or related models (corresponding to nesting arrays in JSON or embedded formsets in django). Specifically, for this project, I also wanted to add the ability to parse strings containing currency denominations (e.g. "1 buck, 2 quarters, 3 cents") which meant that I had to add denominations data to the database. Which would mean I had to implement complicated nesting or the user had to run multiple commands to add a single virtual currency.
 
 Adding a simple parsing grammar was, arguably, therefore the simpler more extendible solution. Take for example the following currency specification:
 
