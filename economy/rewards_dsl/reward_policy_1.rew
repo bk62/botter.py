@@ -1,12 +1,13 @@
 
+// All new members
 // no condition
 rule join_bonus
     event member join
     reward 1 BTC to member
 end
 
-//#
 
+// Similar to encouragements bot in freecodecamp tutorial
 // one condition
 rule cheer_up
     event message send
@@ -16,27 +17,54 @@ rule cheer_up
     reward 1 BTC to author
 end
 
-//#
 
-// multiple conditions
+// Bit more complicated
+// Say hi in general channel
+// or thank people in help channel
+// Note: you can condition on nested attributes using '__'
+// Note: multiple conditions are separated by commas
+// and are combined with an 'OR'
 rule polite_bonus
     event message send
     conditions [
-        content *= 'hi' and channel == 'general',
-        content *= 'thank' and channel == 'help'
+        content ~= 'hi' and channel__name == 'general',
+        content ~= 'thank' and channel__name == 'help'
     ]
     reward 1 BTC to author
 end
 
-//#
-
+// Reply in the help channel *or* reply with welcome anywhere
+// Note: No parenthesis so left to right precedence
 // multiple rewards
 rule help_bonus
     event message send
     conditions [
-        reply == true and channel == 'help' or content *= 'welcome'
+        reply == true and channel__name == 'help' or content *= 'welcome'
     ]
     reward 1 BTC to original_author
     reward 1 BTC to author
 end
 
+// Both message author and reactor get bonuses in general channel
+// reactions
+rule reactions_in_general
+    event reaction add
+    conditions [
+        channel__name == 'general'
+    ]
+    // original_author = message author
+    reward 2 BTC to original_author
+    // author = reactor
+    reward 1 BTC to author
+end
+
+
+// First to react with new reaction in announcements gets a bonus
+// TODO lt, gt etc
+rule first_to_react_announcements
+    event reaction add
+    conditions [
+        channel__name == 'announcements' and reaction__count == 1
+    ]
+    reward 3 btc to author
+end

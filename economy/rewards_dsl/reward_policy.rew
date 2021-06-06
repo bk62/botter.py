@@ -18,6 +18,7 @@ rule cheer_up
 end
 
 
+
 // Bit more complicated
 // Say hi in general channel
 // or thank people in help channel
@@ -33,6 +34,10 @@ rule polite_bonus
     reward 1 BTC to author
 end
 
+
+
+
+
 // Reply in the help channel *or* reply with welcome anywhere
 // Note: No parenthesis so left to right precedence
 // multiple rewards
@@ -44,6 +49,8 @@ rule help_bonus
     reward 1 BTC to original_author
     reward 1 BTC to author
 end
+
+
 
 // Both message author and reactor get bonuses in general channel
 // reactions
@@ -57,6 +64,8 @@ rule reactions_in_general
     // author = reactor
     reward 1 BTC to author
 end
+
+
 
 
 // First to react with new reaction in announcements gets a bonus

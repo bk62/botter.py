@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+from util import render_template
 from economy import rewards_policy
 from economy.cogs import Wallet
 
@@ -36,7 +37,7 @@ class Rewards(commands.Cog, name='Economy: Rewards.'):
             print(f'Interpreting policy rule {rule.name}')
             event_name, event_type = rule.event.name, rule.event.type
             event = rewards_policy.EVENTS[event_name][event_type]
-            conditions = rule.conditions.statements
+            conditions = rule.conditions.statements if rule.conditions else []
             rewards = rule.rewards
 
             async def eval_conditions(event_context):
@@ -69,7 +70,7 @@ class Rewards(commands.Cog, name='Economy: Rewards.'):
     @commands.group(
         help='Rewards admin. Bot owner only. Stub'
     )
-    def rewards(self, ctx):
+    async def rewards(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(self.rewards)
     
@@ -77,13 +78,23 @@ class Rewards(commands.Cog, name='Economy: Rewards.'):
         name='show_policy',
         help='View rewards policy. Bot owner only. Stub.'
     )
-    def rewards_show_policy(self, ctx):
+    async def rewards_show_policy(self, ctx):
+        policy_text = rewards_policy.policy_file_content()
+        data = dict(title='Reward Policy', text=policy_text)
+        text = await render_template('reward_policy.jinja2', data)
+        await ctx.reply(text)
+    
+    @rewards.command(
+        name='download_policy',
+        help='Download policy config file. Bot owner only.'
+    )
+    async def rewards_download_policy(self, ctx):
         pass
     
     @rewards.command(
         name='update_policy',
-        help='Update rewards policy. Bot owner only. Stub.'
+        help='Update rewards policy. Use download_policy command to download config file. Modify and upload using this command. Bot owner only. Stub.'
     )
-    def rewards_policy_update(self, ctx):
+    async def rewards_policy_update(self, ctx):
         pass
     

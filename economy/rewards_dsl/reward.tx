@@ -8,7 +8,7 @@ Policy:
 Rule:
     'rule' name=ID
         event=Event
-        conditions=Condition
+        (conditions=Condition)?
         rewards+=Reward
     'end'
 ;
@@ -46,9 +46,9 @@ Subject: Attribute | Value;
 Attribute:
 
     name =
-    // examples
-    'content'  | 'channel' | 'reply' | 'original_author' |
-    'original_message'
+    // e.g.
+    // 'content'  | 'channel' | 'reply' | 'original_author' |
+    // 'original_message' | 'channel__name'
     // general pattern
      /[a-zA-z_0-9]+/
 ;

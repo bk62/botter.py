@@ -120,6 +120,10 @@ def print_policy(policy_model):
         event = EVENTS[rule.event.name][rule.event.type]
         print(event)
 
+def policy_file_content():
+    with open(DSL_PATH / 'reward_policy.rew') as f:
+        return f.read()
+
 
 def eval_statement(stmt, ctx):
     """Evaluate a one or more expressions combined by and/or operators."""
