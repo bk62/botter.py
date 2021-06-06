@@ -6,7 +6,7 @@ from economy import rewards_policy
 from economy.cogs import Wallet
 
 
-class Rewards(commands.Cog, name='Economy: Rewards.'):
+class Rewards(commands.Cog, name='Economy.Rewards', description="Rewards in virtual currencies."):
     def __init__(self, bot):
         self.bot = bot
         self.policy_model = rewards_policy.rewards_policy_m
@@ -16,7 +16,7 @@ class Rewards(commands.Cog, name='Economy: Rewards.'):
         print(reward.user, ctx.get_attribute(reward.user))
         print(reward.currency_amount.amount, reward.currency_amount.code)
 
-        wallet_cog: Wallet = self.bot.get_cog('Economy: Wallet and Payments.')
+        wallet_cog: Wallet = self.bot.get_cog('Economy.Wallet')
 
         # Let's assume Wallet cog is there! TODO
         # if wallet_cog is None:

@@ -15,7 +15,7 @@ from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmou
 from economy import util
 
 
-class Gambling(commands.Cog, name='Gambling'):
+class Gambling(commands.Cog, name='Economy.Gambling'):
     def __init__(self, bot):
         self.bot = bot
 

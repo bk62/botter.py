@@ -26,7 +26,7 @@ class WalletData:
     new: bool
 
 
-class Wallet(commands.Cog, name='Economy: Wallet and Payments.'):
+class Wallet(commands.Cog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
     def __init__(self, bot):
         self.bot = bot
 

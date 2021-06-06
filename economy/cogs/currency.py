@@ -14,7 +14,7 @@ from economy import util
 
 
 
-class Currency(BaseCog, name='Economy: Manage Virtual Currencies. Bot owner only.'):
+class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):
     @commands.group(
         name='currency', aliases=['cur'],
         help="Manage virtual currencies. List, create, edit and delete currencies.",
