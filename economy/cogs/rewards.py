@@ -65,3 +65,25 @@ class Rewards(commands.Cog, name='Economy: Rewards.'):
 
             print('adding evt handler ', event)
             self.bot.add_listener(evt_handler, event)
+
+    @commands.group(
+        help='Rewards admin. Bot owner only. Stub'
+    )
+    def rewards(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(self.rewards)
+    
+    @rewards.command(
+        name='show_policy',
+        help='View rewards policy. Bot owner only. Stub.'
+    )
+    def rewards_show_policy(self, ctx):
+        pass
+    
+    @rewards.command(
+        name='update_policy',
+        help='Update rewards policy. Bot owner only. Stub.'
+    )
+    def rewards_policy_update(self, ctx):
+        pass
+    

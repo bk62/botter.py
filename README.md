@@ -25,8 +25,10 @@ WIP
 
 
 ### Parsing
-
 I think one of the more interesting things I could try to do with a discord bot is try figure out ways to use custom syntaxes and parsers to help make these bot more useful without making it too complicated.
+
+#### Currency 
+
 
 `discord.py` provides convenient and expressive command argument parsing but lots of nesting can become convoluted and perplexing. Especially since I planned to add CRUD functionality, I needed ways to get structured user input comparable to using web forms or AJAX POSTS with JSON.
 
@@ -52,11 +54,109 @@ description "National Currency of the US"
 denominations buck 1, penny 0.01, grand 1000
 ```
 
-The economy extension, (using the `CurrencySpec` grammar and parser) is able to parse it and creates the corresponding ORM models for currencies and denominations allowing commands like,
+The economy extension, (using the `CurrencySpec` grammar and parser) is able to parse it and creates the corresponding ORM models for currencies and denominations allowing commands to take simple currency amount strings (like `2 grand, 40 bucks, 5 penny`) as input e.g.,
 
 
 `bp*gamble 1 grand`
 
+(`economy.parsers` contains the `pyleri` grammar definitions and parsers for parsing currency definition specs and currency amount strings.)
+
+#### Reward Policies
+
+
+WIP - Doesn't work yet.
+
+The idea here was to let guild admins define reward policies with a simple DSL -- intended to be more of a proof of concept than an efficient execution.
+
+For example, the following rule would reward new members (assuming a currency with symbol BTC was previously added)
+```
+rule join_bonus
+    event member join
+    reward 1 BTC to member
+end
+```
+
+You can add conditions too (and comments):
+```
+// Similar to encouragements bot in freecodecamp tutorial
+rule cheer_up
+    event message send
+    conditions [
+        content *= 'sad' and not content *= 'happy'
+    ]
+    reward 1 BTC to author
+end
+```
+
+The `*=` operator is similar to CSS attribute selector. (`^=`, `$=` etc also work similarly.)
+
+
+The following rule is a bit more complicated with multiple conditions and nested attribute access.
+```
+// Say hi in general channel
+// or thank people in help channel
+// Note: you can condition on nested attributes using '__'
+// Note: multiple conditions are separated by commas
+// and are combined with an 'OR'
+rule polite_bonus
+    event message send
+    conditions [
+        content ~= 'hi' and channel__name == 'general',
+        content ~= 'thank' and channel__name == 'help'
+    ]
+    reward 1 BTC to author
+end
+```
+Similarly to Django ORM queries, you can add `__` to access nested attributes. Multiple conditions can being added and are combined with an 'OR' operator.
+
+
+Attributes like 'channel' and 'content' are added depending on the event and the context. Since this is a work in progress, the errors are opaque and there is no documentation.
+
+Here are a few more examples:
+
+```
+// Reply in the help channel *or* reply with welcome anywhere
+// Note: No parenthesis so left to right precedence
+// multiple rewards
+rule help_bonus
+    event message send
+    conditions [
+        reply == true and channel__name == 'help' or content *= 'welcome'
+    ]
+    reward 1 BTC to original_author
+    reward 1 BTC to author
+end
+
+
+
+// Both message author and reactor get bonuses in general channel
+// reactions
+rule reactions_in_general
+    event reaction add
+    conditions [
+        channel__name == 'general'
+    ]
+    // original_author = message author
+    reward 2 BTC to original_author
+    // author = reactor
+    reward 1 BTC to author
+end
+
+
+// First to react with new reaction in announcements gets a bonus
+// TODO lt, gt etc
+rule first_to_react_announcements
+    event reaction add
+    conditions [
+        channel__name == 'announcements' and reaction__count == 1
+    ]
+    reward 3 btc to author
+end
+
+```
+A policy document contains multiple rules. The `economy.cogs.rewards.Rewards` cog handles adding event listeners to enforce each rule.
+
+(The implementation of the DSL (using textx) is in `economy/rewards_dsl`.)
 
 
 ### NLP
@@ -114,10 +214,13 @@ Management commands can be added to `run.py` using [click](https://click.pallets
 
 
 ### Extensions
-- admin - manage `discord.py` extensions
-- economy - extremely minimal virtual currency extension using replit-db
-- encouragements - encouragements bot from freecodecamp tutorial (see below) put into a cog and extension
-- greetings - minimal greetings bot verbatim from `discord.py` docs
+In addition to the simple extensions from `basic-discord-bot`,
+
+#### Economy
+- Currencies - create and update multiple virtual currrencies using custom grammar
+- Wallet - deposits, withdrwals and payments in all the virtual currencies defined in the project
+- Rewards - define reward policies using a custom DSL
+- Gambling - gamble with virtual currencies
 
 
 ### WIP
@@ -127,8 +230,17 @@ Management commands can be added to `run.py` using [click](https://click.pallets
 
 ### TODO
 
+Also see the commented TODO notes throughout the project.
 
+### Known issues
 
+Lots of bug fixing, refactoring and rewriting needed as its being written by one person over a few days. 
+
+But, the following will probably be on the backburner for a while:
+- `bp*admin` extension reloading doesn't seem play well with econ ext. 
+- Currency code and symbol attribute used inconsistently.
+- Error handling is non-existent.
+- I have created ORM models for guilds and channels but am not using them. And, since I'm using replitdb in a simplistic way to store defaults, needs work before using in multiple servers.
 
 ## References
 

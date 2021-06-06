@@ -55,18 +55,31 @@ class EventContext:
     original_message: discord.Message = None
     original_message_content: discord.Message = None
 
+    reaction: discord.Reaction = None
+
     @classmethod
     async def create(cls, event, event_name, event_type, *args, **kwargs):
         ctx = cls(event=event, event_name=event_name, event_type=event_type)
         if event == 'on_message':
             m = args[0]
-            ctx = cls(message=m, author=m.author, content=m.content, channel=m.channel)
+            ctx.message = m
+            ctx.author = m.author
+            ctx.content = m.content
+            ctx.channel = m.channel
             if m.reference is not None:
                 ctx.reply = True
                 if m.reference.cached_message:
                     ctx.original_message = m.reference.cached_message
                     ctx.original_author = m.reference.cached_message.author
                     ctx.original_message_content = m.reference.cached_message.content
+        elif event == 'on_member_join':
+            ctx.member = args[0]
+        elif event == 'on_reaction_add':
+            ctx.reaction = args[0]
+            ctx.author = args[1]
+            ctx.message = ctx.reaction.message
+            ctx.original_author = ctx.message.author
+            ctx.channel = ctx.message.channel
         return ctx
 
     def get_attribute(self, attributes_str):
