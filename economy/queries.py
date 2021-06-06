@@ -10,7 +10,7 @@ def currency_from_denoms(denoms):
     '''Get currency row joined with related denominations given a list with currency symbol and/or denominations.'''
     stmt = (
         select(Currency).
-        join(Currency.denominations).
+        outerjoin(Currency.denominations).
         filter(
             or_(
                 Currency.symbol.in_(denoms),
