@@ -17,7 +17,6 @@ from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmou
 from economy.exc import WalletOpFailedException
 
 
-
 class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
 
     #
@@ -44,7 +43,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
             members = [members]
         for member in members:
             wallet_data = dataclasses.WalletEmbed.from_wallet(await self.service.get_or_create_wallet(member.id))
-            
+
             await ctx.reply(embed=wallet_data.embed)
 
     @econ.command(
@@ -69,7 +68,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                 await self.service.deposit_in_wallet(member.id, currency_amount)
                 await ctx.reply(f"Deposited amount {currency_amount} into {member.display_name}'s wallet")
             except WalletOpFailedException as e:
-                raise WalletOpFailedException(f"Failed to deposited amount {currency_amount} into {member.display_name}'s wallet: {e}")
+                raise WalletOpFailedException(f"Failed to deposited amount into {member.display_name}'s wallet: {e}")
 
     @econ.command(
         help="Withdraw currency from member wallets",
@@ -92,7 +91,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                 await self.service.withdraw_from_wallet(member.id, currency_amount)
                 await ctx.reply(f"Withdrew {currency_amount} from {member.display_name}'s wallet")
             except WalletOpFailedException as e:
-                raise WalletOpFailedException(f"Failed to deposited amount {currency_amount} into {member.display_name}'s wallet: {e}")
+                raise WalletOpFailedException(f"Failed to withdraw amount from {member.display_name}'s wallet: {e}")
 
     #
     # Normal users:
@@ -107,7 +106,6 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
     async def wallet(self, ctx):
         wallet_data = dataclasses.WalletEmbed.from_wallet(await self.service.get_or_create_wallet(ctx.author.id))
         await ctx.reply(embed=wallet_data.embed)
-    
 
     @commands.command(
         help="Make payments from your wallet."
@@ -128,6 +126,8 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                 await self.service.get_or_create_wallet(member.id)
                 currency_amount = await self.service.currency_amount_from_str(currency_str)
                 await self.service.make_payment(sender_id, member.id, currency_amount)
-                await ctx.reply(f"Made payment of {currency_amount} from {ctx.author.display_name} to {member.display_name}")
+                await ctx.reply(
+                    f"Made payment of {currency_amount} from {ctx.author.display_name} to {member.display_name}")
             except WalletOpFailedException as e:
-                raise WalletOpFailedException(f"Failed to make payment of {currency_amount} from {ctx.author.display_name} to {member.display_name}: {e}")
+                raise WalletOpFailedException(
+                    f"Failed to make payment from {ctx.author.display_name} to {member.display_name}: {e}")
