@@ -92,7 +92,7 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
 
             await ctx.reply(f'Added currency {currency.name} {currency.symbol}')
         except SyntaxError as e:
-            await ctx.reply(f'Error parsing currency spec: {e.msg}')
+            raise commands.CommandError(f'Error parsing currency spec: {e.msg}')
 
     @currency.command(
         name='edit', aliases=['e'],
@@ -131,10 +131,10 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
 
             await ctx.reply(f'Updated currency {currency.name} {currency.symbol}')
         except SyntaxError as e:
-            await ctx.reply(f'Error parsing currency spec: {e.msg}')
+            raise commands.CommandError(f'Error parsing currency spec: {e.msg}')
         except exc.NoResultFound:
             # Not found
-            await ctx.reply(f'Error finding currency with symbol: {symbol}')
+            raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
 
     @currency.command(
         name='del', aliases=['d'],
@@ -158,7 +158,8 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
             await ctx.reply(f'Deleted currency {currency.name} {currency.symbol}')
         except exc.NoResultFound:
             # Not found
-            await ctx.reply(f'Error finding currency with symbol: {symbol}')
+            raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
+
 
     @currency.command(
         name='default',
@@ -192,8 +193,7 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
                         currency = res.scalar_one()  # raises exception if not found
             except exc.NoResultFound:
                 # Not found
-                await ctx.reply(f'Error finding currency with symbol: {symbol}')
-                return
+                raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
 
         if set_default == 'set_channel':
             # set for channels

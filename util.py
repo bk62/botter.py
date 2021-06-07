@@ -32,9 +32,9 @@ def dump_command_ctx(ctx):
         # name: inline
         'args': False,
         'kwargs': False,
-        'command': False,
-        'invoked_with': False,
-        'invoked_subcommand': False,
+        'command': True,
+        'invoked_with': True,
+        'invoked_subcommand': True,
         'subcommand_passed': True,
         'valid': True
     }
