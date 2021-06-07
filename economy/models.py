@@ -93,10 +93,10 @@ class TransactionLog(Base):
     id = Column(Integer, primary_key=True)
 
     user_id = Column(Integer, ForeignKey('user.id'))
-    user = relationship('User', backref='transactions', lazy='selectin')
+    user = relationship('User', backref='transactions', lazy='selectin', foreign_keys=[user_id])
 
     related_user_id = Column(Integer, ForeignKey('user.id'))
-    related_user = relationship('User', backref='transactions_related', lazy='selectin')
+    related_user = relationship('User', backref='transactions_related', lazy='selectin', foreign_keys=[related_user_id])
 
     currency_id = Column(Integer, ForeignKey('currency.id'))
     currency = relationship('Currency', lazy='selectin')
@@ -121,7 +121,7 @@ class RewardLog(Base):
     id = Column(Integer, primary_key=True)
 
     user_id = Column(Integer, ForeignKey('user.id'))
-    user = relationship('User', backref='wallet', lazy='selectin')
+    user = relationship('User', backref='reward_logs', lazy='selectin')
 
     currency_id = Column(Integer, ForeignKey('currency.id'))
     currency = relationship('Currency', lazy='selectin')

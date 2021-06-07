@@ -134,6 +134,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                 try :
                     balance = await Wallet.get_balance(session, user_id, currency_symbol)
                     balance.balance += amount
+                    return balance
                 except exc.NoResultFound as e:
                     raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
 
@@ -148,6 +149,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                     if balance.balance < amount:
                         raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
                     balance.balance -= amount
+                    return balance
                 except exc.NoResultFound as e:
                     raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
 
