@@ -22,3 +22,21 @@ async def render_template(template_name, template_context=None):
     tmpl = get_template(template_name)
     text = await tmpl.render_async(**template_context)
     return text
+
+
+#
+# Misc 
+
+def dump_command_ctx(ctx):
+    attrs = {
+        # name: inline
+        'args': False,
+        'kwargs': False,
+        'command': False,
+        'invoked_with': False,
+        'invoked_subcommand': False,
+        'subcommand_passed': True,
+        'valid': True
+    }
+    for attr, inline in attrs.items():
+        yield attr, getattr(ctx, attr, None), inline
