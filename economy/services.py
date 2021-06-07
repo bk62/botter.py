@@ -5,6 +5,7 @@ from sqlalchemy import exc
 import db
 
 from economy import models, repositories, parsers, util, dataclasses
+from economy.rewards_policy import RuleEvent, EventContext
 from economy.exc import WalletOpFailedException
 
 logger = logging.getLogger('economy.EconomyService')
@@ -139,9 +140,9 @@ class EconomyService:
 
     # TODO args needlessly long
     @staticmethod
-    async def grant_reward(reward, ctx, rule_name, event_name, event_type, event):
+    async def grant_reward(rule_event: RuleEvent, event_ctx: EventContext, reward):
         # ensure user has wallet
-        user = ctx.get_attribute(reward.user)
+        user = event_ctx.get_attribute(reward.user)
 
         logger.debug(f'Executing individual reward: {reward.currency_amount.amount} {reward.currency_amount.code} to {user}')
 
@@ -154,11 +155,11 @@ class EconomyService:
         # TODO inefficient
         # deposit reward amount
         user_id = user.id
-        note = f'Reward for policy rule "{rule_name}" ({event}:{event_name},{event_type})'
+        note = f'Reward for policy rule {rule_event}'
         balance = await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
     
         async with db.async_session() as session:
             async with session.begin():
-                reward_log = models.RewardLog(user_id=user.id, currency=balance.currency, amount=currency_amount.amount, note=f'Reward for policy rule "{rule_name}" ({event}:{event_name},{event_type})')
+                reward_log = models.RewardLog(user_id=user.id, currency=balance.currency, amount=currency_amount.amount, note=note)
                 session.add(reward_log)
   

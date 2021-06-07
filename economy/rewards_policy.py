@@ -6,6 +6,10 @@ import logging
 import discord
 from textx import metamodel_from_file
 
+
+
+
+
 DSL_PATH = Path(__file__).parent / 'rewards_dsl'
 
 logger = logging.getLogger('economy.rewards.reward_policy')
@@ -16,40 +20,51 @@ rewards_policy_mm = metamodel_from_file(str(DSL_PATH / 'reward.tx'))
 rewards_policy_m = rewards_policy_mm.model_from_file(DSL_PATH / 'reward_policy.rew')
 
 
-
-# event_name -> event_type -> discord.py event name
-# TODO replace with on_raw_* event where appropriate
-# TODO intents
-EVENTS = {
-    'member': {
-        'join': 'on_member_join',
-        'leave': 'on_member_remove',
-        'ban': 'on_member_ban',
-        'unban': 'on_member_unban',
-        'update': 'on_member_update',
-    },
-    'message': {
-        'send': 'on_message',
-        'edit': 'on_message_edit',
-        'delete': 'on_message_delete',
-    },
-    'reaction': {
-        'add': 'on_reaction_add',
-        'remove': 'on_reaction_remove',
-        'clear': 'on_reaction_clear',
+@dataclass
+class RewardRuleEvent:
+    # event_name -> event_type -> discord.py event name
+    # TODO replace with on_raw_* event where appropriate
+    # TODO intents
+    EVENTS = {
+        'member': {
+            'join': 'on_member_join',
+            'leave': 'on_member_remove',
+            'ban': 'on_member_ban',
+            'unban': 'on_member_unban',
+            'update': 'on_member_update',
+        },
+        'message': {
+            'send': 'on_message',
+            'edit': 'on_message_edit',
+            'delete': 'on_message_delete',
+        },
+        'reaction': {
+            'add': 'on_reaction_add',
+            'remove': 'on_reaction_remove',
+            'clear': 'on_reaction_clear',
+        }
     }
-}
+
+    event_name: str
+    event_type: str
+    discord_event_name: str
+    rule_name: str
+
+    @classmethod
+    def create(cls, rule_name, event_name, event_type):
+        discord_event_name = cls.EVENTS[event_name][event_type]
+        return cls(rule_name=rule_name, event_name=event_name, event_type=event_type, discord_event_name=discord_event_name)
+    
+    def __repr__(self):
+        return f'RewardRuleEvent({self.rule_name!r}, {self.discord_event_name!r}, {self.event_name!r}, {self.event_type!r})'
+
 
 
 @dataclass
 class EventContext:
     """Event context dataclass."""
 
-    rule_name: str = None
-
-    event: str = None
-    event_name: str = None
-    event_type: str = None
+    rule_event: RewardRuleEvent = None
 
     member: discord.User = None
 
@@ -65,11 +80,11 @@ class EventContext:
     reaction: discord.Reaction = None
 
     @classmethod
-    async def create(cls, rule_name, event, event_name, event_type, *args, **kwargs):
-        logger.debug(f'Creating context for rule {rule_name}, event {event} ({event_name}-{event_type}) with args {args} and kwargs {kwargs}')
+    async def create(cls, rule_event, *args, **kwargs):
+        logger.debug(f'Creating context for {rule_event} with args {args} and kwargs {kwargs}')
 
-        ctx = cls(rule_name=rule_name, event=event, event_name=event_name, event_type=event_type)
-        if event == 'on_message':
+        ctx = cls(rule_event=rule_event)
+        if rule_event.discord_event_name == 'on_message':
             m = args[0]
             ctx.message = m
             ctx.author = m.author
@@ -81,9 +96,9 @@ class EventContext:
                     ctx.original_message = m.reference.cached_message
                     ctx.original_author = m.reference.cached_message.author
                     ctx.original_message_content = m.reference.cached_message.content
-        elif event == 'on_member_join':
+        elif rule_event.discord_event_name == 'on_member_join':
             ctx.member = args[0]
-        elif event == 'on_reaction_add':
+        elif rule_event.discord_event_name == 'on_reaction_add':
             ctx.reaction = args[0]
             ctx.author = args[1]
             ctx.message = ctx.reaction.message
@@ -113,6 +128,59 @@ class EventContext:
         return val
 
 
+class RewardsPolicyEngine:
+    def __init__(self, service):
+        self.policy_model = rewards_policy_m
+        self.service = service
+    
+    def interpret_policy(self):
+        policy_model = self.policy_model
+        for rule in policy_model.rules:
+            logger.debug(f'Interpreting policy rule {rule.name}')
+            
+            rule_event = RewardRuleEvent.create(rule.name, rule.event.name, rule.event.type)
+            
+            conditions = rule.conditions.statements if rule.conditions else []
+            rewards = rule.rewards
+
+            evt_handler = self.rule_event_handler( rule_event, conditions, rewards)
+            logger.debug('Adding event handler {event} for rule {rule.name} ')
+            yield evt_handler, rule_event.discord_event_name
+            # self.bot.add_listener(evt_handler, event)
+    
+    def rule_event_handler(self, rule_event: RewardRuleEvent, conditions, rewards):
+        async def eval_conditions(event_context):
+            logger.debug(f'Evaluating conditions for rule {rule_event.rule_name}')
+
+            # equivalent to s1 OR s2 OR ...
+            for statement in conditions:
+                val = eval_statement(statement, event_context)
+                if val:
+                    # short circuit
+                    return True
+            return False
+
+        async def exec_rewards(event_context):
+            logger.debug(f'Executing reward_policy for rule {rule_event.rule_name}')
+            for reward in rewards:
+                await self.service.grant_reward(rule_event, event_context, reward)
+
+        async def evt_handler(*args, **kwargs):
+            logger.debug(f'Triggered event handler for {rule_event}')
+            event_context = await EventContext.create(rule_event, *args, **kwargs)
+            if rule_event.event_name == 'message' and event_context.message.content.startswith(self.bot.command_prefix):
+                # skip commands to this bot # TODO possible to recog other bots?
+                return
+            if event_context.message.author == self.bot.user: # TODO check bot users?
+                # skip msg from this bot
+                return
+            if await eval_conditions(event_context):
+                await exec_rewards(event_context)
+
+        return evt_handler
+
+
+
 def print_policy(policy_model):
     for rule in policy_model.rules:
         print(f'Event {rule.event.name!r} {rule.event.type!r}')
@@ -128,7 +196,7 @@ def print_policy(policy_model):
         for reward in rule.rewards:
             print(f'{reward.currency_amount.amount!r} {reward.currency_amount.code!r} to {reward.user!r}')
 
-        event = EVENTS[rule.event.name][rule.event.type]
+        event = RewardRuleEvent.EVENTS[rule.event.name][rule.event.type]
         print(event)
 
 def policy_file_content():
