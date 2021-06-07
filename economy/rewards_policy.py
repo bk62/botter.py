@@ -129,9 +129,10 @@ class EventContext:
 
 
 class RewardsPolicyEngine:
-    def __init__(self, service):
+    def __init__(self, service, bot):
         self.policy_model = rewards_policy_m
         self.service = service
+        self.bot = bot
     
     def interpret_policy(self):
         policy_model = self.policy_model
@@ -144,8 +145,7 @@ class RewardsPolicyEngine:
             rewards = rule.rewards
 
             evt_handler = self.rule_event_handler( rule_event, conditions, rewards)
-            logger.debug('Adding event handler {event} for rule {rule.name} ')
-            yield evt_handler, rule_event.discord_event_name
+            yield evt_handler, rule_event
             # self.bot.add_listener(evt_handler, event)
     
     def rule_event_handler(self, rule_event: RewardRuleEvent, conditions, rewards):

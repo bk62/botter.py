@@ -18,53 +18,12 @@ logger = logging.getLogger('economy.rewards.RewardsCog')
 class Rewards(BaseCog, name='Economy.Rewards', description="Rewards in virtual currencies."):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(bot, *args, **kwargs)
-        self.policy_model = rewards_policy.rewards_policy_m
+        self.policy_engine = rewards_policy.RewardsPolicyEngine(service=self.service, bot=self.bot.command_prefix)
 
-    # TODO refactor these into rewards_policy.py
-
-    def rule_event_handler(self, rule_name, event_name, event_type, event, conditions, rewards):
-        async def eval_conditions(event_context):
-            logger.debug(f'Evaluating conditions for rule {rule_name}')
-
-            # equivalent to s1 OR s2 OR ...
-            for statement in conditions:
-                val = rewards_policy.eval_statement(statement, event_context)
-                if val:
-                    # short circuit
-                    return True
-            return False
-
-        async def exec_rewards(event_context):
-            logger.debug(f'Executing reward_policy for rule {rule_name}')
-            for reward in rewards:
-                await self.service.grant_reward(reward, event_context, rule_name, event_name, event_type, event)
-
-        async def evt_handler(*args, **kwargs):
-            logger.debug(f'Triggered event handler for rule {rule_name} (event_name, event_type, event, args, kwargs)')
-            event_context = await rewards_policy.EventContext.create(rule_name, event, event_name, event_type, *args, **kwargs)
-            if event_name == 'message' and event_context.message.content.startswith(self.bot.command_prefix):
-                # skip commands to this bot # TODO possible to recog other bots?
-                return
-            if event_context.message.author == self.bot.user: # TODO check bot users?
-                # skip msg from this bot
-                return
-            if await eval_conditions(event_context):
-                await exec_rewards(event_context)
-
-        return evt_handler
-
-    def interpret_policy(self):
-        policy_model = self.policy_model
-        for rule in policy_model.rules:
-            logger.debug(f'Interpreting policy rule {rule.name}')
-            event_name, event_type = rule.event.name, rule.event.type
-            event = rewards_policy.EVENTS[event_name][event_type]
-            conditions = rule.conditions.statements if rule.conditions else []
-            rewards = rule.rewards
-
-            evt_handler = self.rule_event_handler(rule.name, event_name, event_type, event, conditions, rewards)
-            logger.debug('Adding event handler {event} for rule {rule.name} ')
-            self.bot.add_listener(evt_handler, event)
+    def init_policy(self):
+        for evt_handler, rule_event in self.policy_engine.interpret_policy():
+            logger.debug(f'Adding event handler {rule_event.discord_event_name} for rule {rule_event.rule_name}')
+            self.bot.add_listener(evt_handler, rule_event.discord_event_name)
 
     @commands.group(
         help='Rewards admin. Bot owner only. Stub'

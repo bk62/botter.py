@@ -25,7 +25,7 @@ def setup(bot):
     bot.add_cog(Gambling(bot, service))
 
     rewards_cog = Rewards(bot, service)
-    rewards_cog.interpret_policy()
+    rewards_cog.init_policy()
     bot.add_cog(rewards_cog)
 
 

@@ -5,7 +5,7 @@ from sqlalchemy import exc
 import db
 
 from economy import models, repositories, parsers, util, dataclasses
-from economy.rewards_policy import RuleEvent, EventContext
+from economy.rewards_policy import RewardRuleEvent, EventContext
 from economy.exc import WalletOpFailedException
 
 logger = logging.getLogger('economy.EconomyService')
@@ -140,7 +140,7 @@ class EconomyService:
 
     # TODO args needlessly long
     @staticmethod
-    async def grant_reward(rule_event: RuleEvent, event_ctx: EventContext, reward):
+    async def grant_reward(rule_event: RewardRuleEvent, event_ctx: EventContext, reward):
         # ensure user has wallet
         user = event_ctx.get_attribute(reward.user)
 
