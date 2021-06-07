@@ -3,8 +3,10 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
+from base import BaseCog
 
-class Greetings(commands.Cog):
+
+class Greetings(BaseCog):
     def __init__(self, bot):
         self.bot = bot
 

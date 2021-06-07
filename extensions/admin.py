@@ -1,12 +1,11 @@
 from discord.ext import commands
 import typing
+
 import settings
+from base import BaseCog
 
 
-class AdminCommands(commands.Cog, name='Bot Admin Commands'):
-
-    def __init__(self, bot):
-        self.bot = bot
+class AdminCommands(BaseCog, name='Admin', description='Bot Admin Commands'):
 
     async def ext_check(self, ctx):
         return ctx.author.id == self.bot.author_id

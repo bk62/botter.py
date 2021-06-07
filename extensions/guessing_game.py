@@ -5,9 +5,11 @@ from discord.ext import commands
 import discord
 import typing
 
+from base import BaseCog
+
 
 # https://github.com/Rapptz/discord.py/blob/v1.7.2/examples/guessing_game.py
-class GuessingGame(commands.Cog, name="Free guessing game -- with nothing at stake."):
+class GuessingGame(BaseCog, name="Free guessing game -- with nothing at stake."):
     def __init__(self, bot):
         self.bot = bot
     

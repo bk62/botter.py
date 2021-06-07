@@ -4,6 +4,8 @@ import aiohttp
 import json
 import random
 
+from base import BaseCog
+
 sad_words = ['sad', 'depressed', 'unhappy', 'angry', 'miserable']
 starter_encouragements = [
     "Cheer up!", "Hang in there.", "You are a great person / bot!"
@@ -38,10 +40,7 @@ async def get_quote():
                 return q
 
 
-class Encouragements(commands.Cog, name='Encouragements'):
-
-    def __init__(self, bot):
-        self.bot = bot
+class Encouragements(BaseCog, name='Encouragements'):
 
     @commands.command(help='Fetch an inspiring quote from zenquotes.io')
     async def inspire(self, ctx):
