@@ -8,6 +8,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import exc
 
+from base import BaseCog
 import db
 from util import render_template
 
@@ -26,9 +27,7 @@ class WalletData:
     new: bool
 
 
-class Wallet(commands.Cog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
-    def __init__(self, bot):
-        self.bot = bot
+class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
 
     # Helpers
     @staticmethod

@@ -1,23 +1,20 @@
 import random
+import typing
 
 import discord
 from discord.ext import commands
-import db
-from economy import models
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import exc
 
-from util import render_template, BaseCog
-import typing
-
+import db
+from base import BaseCog
+from util import render_template
+from economy import models, util
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser
-from economy import util
 
 
-class Gambling(commands.Cog, name='Economy.Gambling'):
-    def __init__(self, bot):
-        self.bot = bot
+class Gambling(BaseCog, name='Economy.Gambling'):
 
     @commands.command(
         help='Gamble on a coin flip. STUB'

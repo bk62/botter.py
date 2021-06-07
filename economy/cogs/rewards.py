@@ -1,14 +1,15 @@
 import discord
 from discord.ext import commands
 
+from base import BaseCog
 from util import render_template
 from economy import rewards_policy
 from economy.cogs import Wallet
 
 
-class Rewards(commands.Cog, name='Economy.Rewards', description="Rewards in virtual currencies."):
+class Rewards(BaseCog, name='Economy.Rewards', description="Rewards in virtual currencies."):
     def __init__(self, bot):
-        self.bot = bot
+        super().__init__(bot)
         self.policy_model = rewards_policy.rewards_policy_m
 
     async def exec_reward(self, reward, ctx):

@@ -1,17 +1,16 @@
+import typing
+
 import discord
 from discord.ext import commands
-import db
-from economy import models
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import exc
 
-from util import render_template, BaseCog
-import typing
-
+import db
+from base import BaseCog
+from economy import models, util
+from util import render_template
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser
-from economy import util
-
 
 
 class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):

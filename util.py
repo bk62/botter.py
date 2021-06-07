@@ -1,16 +1,6 @@
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from discord.ext import commands
 
-
-
-# Customize discord.py
-class BaseCog(commands.Cog):
-    def __init__(self, bot, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.bot = bot
-
-
-
 #
 # Jinja2 templating:
 
