@@ -50,14 +50,11 @@ if DEBUG:
     # Echo queries in debug mode
     DB_ENGINE_KWARGS['echo'] = True
 
-DB_ENGINE_KWARGS['echo'] = False
-
 
 # Logging:
 
-LOGGING_LEVEL = logging.DEBUG if DEBUG else logging.INFO
+LOGGING_LEVEL = logging.INFO if DEBUG else logging.WARN
 
-LOGGING_LEVEL = 'ERROR'
 
 if os.getenv('LOGGING_LEVEL'):
     # can override with env var
