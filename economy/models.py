@@ -11,7 +11,7 @@ class Currency(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    symbol = Column(String(length=3), index=True)
+    symbol = Column(String(length=3), index=True, unique=True)
     description = Column(String, nullable=True)
 
     guild_id = Column(BigInteger, ForeignKey('guild.id'), nullable=True)
@@ -19,7 +19,7 @@ class Currency(Base):
 
     denominations = relationship('Denomination', back_populates='currency', cascade='save-update, merge, expunge, delete, delete-orphan', lazy='selectin')
 
-    balances = relationship('CurrencyBalance', back_populates='currency', cascade='save-update, merge, expunge, delete, delete-orphan')
+    balances = relationship('CurrencyBalance', back_populates='currency', cascade='save-update, merge, expunge, delete, delete-orphan', lazy='selectin')
 
     __mapper_args__ = {"eager_defaults": True}
     # B/c of ext reloading - TODO
