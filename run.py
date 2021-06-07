@@ -64,12 +64,12 @@ def cleardb():
         del db.replit_db[k]
 
 @cli.command('init')
-@click.option('--force', is_flag=True, help='Force adding defaut currency if db already exists.')
+@click.option('--force', is_flag=True, help='Force adding initial currency if db already exists.')
 def init(force):
     """
     Initialize a new project.
     
-    Creates a database and creates a default currency.
+    Creates a database and creates an initial currency.
     """
     no_db = not os.path.exists(settings.DB_PATH)
     if (no_db):
@@ -79,7 +79,7 @@ def init(force):
     if (no_db or force):
         logger.info('Adding intial currency')
         click.echo('[+] Adding a currency...')
-        economy.create_default_currency()
+        economy.create_initial_currency()
     else:
         click.echo('[-] DB exists. Not creating currency. Add "--force" to force.')
 

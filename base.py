@@ -6,9 +6,12 @@ from util import dump_command_ctx
 
 
 class BaseCog(commands.Cog):
-    def __init__(self, bot, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, bot, service=None, **kwargs):
+        super().__init__(**kwargs)
+        
         self.bot = bot
+        self.service = service
+
 
     async def cog_command_error(self, ctx, command_error):
         embed = discord.Embed(title='Something went wrong..', description=str(command_error))

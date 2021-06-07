@@ -16,8 +16,8 @@ logger = logging.getLogger('economy.rewards.RewardsCog')
 
 
 class Rewards(BaseCog, name='Economy.Rewards', description="Rewards in virtual currencies."):
-    def __init__(self, bot):
-        super().__init__(bot)
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(bot, *args, **kwargs)
         self.policy_model = rewards_policy.rewards_policy_m
 
     # TODO args needlessly long

@@ -14,10 +14,8 @@ from util import render_template
 
 from economy import models, queries, util
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser, re_decimal_value
+from economy.exc import WalletOpFailedException
 
-
-class WalletOpFailedException(Exception):
-    pass
 
 
 @dataclass
