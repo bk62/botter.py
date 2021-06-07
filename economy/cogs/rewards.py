@@ -31,6 +31,40 @@ class Rewards(commands.Cog, name='Economy.Rewards', description="Rewards in virt
         # deposit reward amount
         await wallet_cog.deposit_in_wallet(user.id, currency_amount.symbol, currency_amount.amount)
 
+    def rule_event_handler(self, rule_name, event_name, event_type, event, conditions, rewards):
+        async def eval_conditions(event_context):
+            print('eval ', rule_name)
+
+            # equivalent to s1 OR s2 OR ...
+            for statement in conditions:
+                val = rewards_policy.eval_statement(statement, event_context)
+                if val:
+                    # short circuit
+                    return True
+            return False
+
+        async def exec_rewards(event_context):
+            print('exec reward', rule_name)
+            for reward in rewards:
+                await self.exec_reward(reward, event_context)
+
+        async def evt_handler(*args, **kwargs):
+            print('event handler for rule ', rule_name, event_name, event_type, event, args, kwargs)
+            event_context = await rewards_policy.EventContext.create(event, event_name, event_type, *args, **kwargs)
+            if event_name == 'message' and event_context.message.content.startswith(self.bot.command_prefix):
+                # skip commands to this bot # TODO possible to recog other bots?
+                return
+            if event_context.message.author == self.bot.user: # TODO check bot users?
+                # skip msg from this bot
+                return
+            if await eval_conditions(event_context):
+                print('cond true, calling reward exec')
+                await exec_rewards(event_context)
+            else:
+                print('cond fail')
+
+        return evt_handler
+
     def interpret_policy(self):
         policy_model = self.policy_model
         for rule in policy_model.rules:
@@ -40,30 +74,7 @@ class Rewards(commands.Cog, name='Economy.Rewards', description="Rewards in virt
             conditions = rule.conditions.statements if rule.conditions else []
             rewards = rule.rewards
 
-            async def eval_conditions(event_context):
-                print('eval')
-                print(event_context)
-
-                # equivalent to s1 OR s2 OR ...
-                for statement in conditions:
-                    val = rewards_policy.eval_statement(statement, event_context)
-                    if val:
-                        # short circuit
-                        return True
-                return False
-
-            async def exec_rewards(event_context):
-                for reward in rewards:
-                    await self.exec_reward(reward, event_context)
-
-            async def evt_handler(*args, **kwargs):
-                event_context = await rewards_policy.EventContext.create(event, event_name, event_type, *args, **kwargs)
-                if await eval_conditions(event_context):
-                    print('cond true, calling reward exec')
-                    await exec_rewards(event_context)
-                else:
-                    print('cond fail')
-
+            evt_handler = self.rule_event_handler(rule.name, event_name, event_type, event, conditions, rewards)
             print('adding evt handler ', event)
             self.bot.add_listener(evt_handler, event)
 

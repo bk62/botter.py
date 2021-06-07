@@ -44,6 +44,7 @@ end
 rule help_bonus
     event message send
     conditions [
+    // FAILING
         reply == true and channel__name == 'help' or content *= 'welcome'
     ]
     reward 1 BTC to original_author
@@ -73,6 +74,7 @@ end
 rule first_to_react_announcements
     event reaction add
     conditions [
+    # FAILING
         channel__name == 'announcements' and reaction__count == 1
     ]
     reward 3 btc to author
