@@ -86,7 +86,7 @@ class CurrencyRepository(BaseRepository):
                 # joinedload(Currency.denominations)
             # )
         )
-        res = await session.execute(stmt)
+        res = await self.session.execute(stmt)
         currency = res.unique().scalar_one()
         return currency
 

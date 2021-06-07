@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, BigInteger, DateTime, func
 from sqlalchemy.orm import relationship
+from sqlalchemy.schema import UniqueConstraint
 
 
 from db import Base
@@ -69,7 +70,10 @@ class CurrencyBalance(Base):
     wallet = relationship('Wallet', back_populates='currency_balances', lazy='selectin')
 
     # B/c of ext reloading - TODO
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        UniqueConstraint('currency_id', 'wallet_id', name='uix_currency_wallet'),
+        {'extend_existing': True, }
+    )
 
 
 class Wallet(Base):

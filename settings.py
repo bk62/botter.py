@@ -48,7 +48,7 @@ DB_ENGINE_KWARGS = dict(future=True)
 
 if DEBUG:
     # Echo queries in debug mode
-    DB_ENGINE_KWARGS['echo'] = True
+    DB_ENGINE_KWARGS['echo'] = False #True
 
 
 # Logging:

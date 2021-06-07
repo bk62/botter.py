@@ -1,8 +1,12 @@
+import logging
+
 import discord
 from discord.ext import commands
 
 import settings
 from util import dump_command_ctx
+
+logger = logging.getLogger(__name__)
 
 
 class BaseCog(commands.Cog):
@@ -24,4 +28,7 @@ class BaseCog(commands.Cog):
             embed.add_field(name='qualified_name', value=self.qualified_name, inline=True)
         embed.set_footer(text='Please contact the bot owner for assistance.')
         await ctx.message.reply(embed=embed)
+
+        # logger.error(f'Base cog on_command_error: {command_error}')
+        raise command_error
 
