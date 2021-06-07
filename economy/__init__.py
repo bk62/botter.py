@@ -21,3 +21,7 @@ def setup(bot):
     rewards_cog.interpret_policy()
     bot.add_cog(rewards_cog)
 
+
+
+def create_default_currency():
+    asyncio.run(Currency._create_bpy())

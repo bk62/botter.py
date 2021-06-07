@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import asyncio
+import os
+
 from keep_alive import keep_alive as flask_keep_alive
-import main
-import db
+import main, db, economy
+import settings
 import click
 
 
@@ -26,10 +28,10 @@ async def _run_db(init=True, drop=False):
     main.init_extensions()
     async with db.engine.begin() as conn:
         if drop:
-            click.echo('Dropping...')
+            click.echo('[*] Dropping db...')
             await conn.run_sync(db.Base.metadata.drop_all)
         if init:
-            click.echo('Creating...')
+            click.echo('[*] Creating db...')
             await conn.run_sync(db.Base.metadata.create_all)
 
 
@@ -55,6 +57,25 @@ def cleardb():
     """Empty replit-db."""
     for k in db.replit_db.keys():
         del db.replit_db[k]
+
+@cli.command('init')
+@click.option('--force', is_flag=True, help='Force adding defaut currency if db already exists.')
+def init(force):
+    """
+    Initialize a new project.
+    
+    Creates a database and creates a default currency.
+    """
+    no_db = not os.path.exists(settings.DB_PATH)
+    if (no_db):
+        click.echo('[+] No DB. Creating...')
+        initdb()
+        click.echo('[+] Done.')
+    if (no_db or force):
+        click.echo('[+] Adding a currency...')
+        economy.create_default_currency()
+    else:
+        click.echo('[-] DB exists. Not creating currency. Add "--force" to force.')
 
 
 if __name__ == '__main__':

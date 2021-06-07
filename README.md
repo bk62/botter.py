@@ -12,13 +12,14 @@ WIP
 
 1. Follow the instructions [here](https://discordpy.readthedocs.io/en/stable/discord.html) to get your token and bot owner id and store these in an env file or replit secrets
 2. Review `settings.py`
-3. Run `python run.py initdb`
+3. Run `python run.py init`
 4. Run `python run.py run`
 5. Run `bp*help` in your guild to view commands
 
 ### Economy
 
-6. Add one or more virtual currencies
+6. Run `bp*currency list` to view auto-added currency.
+7. Add one or more virtual currencies
 7. Set default currencies
 
 ## Key Ideas

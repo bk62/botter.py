@@ -15,6 +15,15 @@ from economy import util
 
 
 class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):
+    
+    @staticmethod
+    async def _create_bpy(**kwargs):
+        """Helper to create an initial currency with spec `BotterPY BPY; description "Default currency."`"""
+        async with db.async_session() as session:
+            async with session.begin():
+                currency = models.Currency(name='BotterPy', symbol='BPY', description="Default currency")
+                session.add(currency)
+    
     @commands.group(
         name='currency', aliases=['cur'],
         help="Manage virtual currencies. List, create, edit and delete currencies.",
