@@ -17,7 +17,9 @@ class Currency(Base):
     guild_id = Column(BigInteger, ForeignKey('guild.id'), nullable=True)
     guild = relationship('Guild', backref='currencies', lazy='selectin')
 
-    denominations = relationship('Denomination', back_populates='currency', lazy='selectin')
+    denominations = relationship('Denomination', back_populates='currency', cascade='save-update, merge, expunge, delete, delete-orphan', lazy='selectin')
+
+    balances = relationship('CurrencyBalance', back_populates='currency', cascade='save-update, merge, expunge, delete, delete-orphan')
 
     __mapper_args__ = {"eager_defaults": True}
     # B/c of ext reloading - TODO
@@ -78,7 +80,7 @@ class Wallet(Base):
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship('User', backref='wallet', lazy='selectin')
 
-    currency_balances = relationship('CurrencyBalance', back_populates='wallet', lazy='selectin')
+    currency_balances = relationship('CurrencyBalance', back_populates='wallet', lazy='selectin', cascade='save-update, merge, expunge, delete, delete-orphan')
 
     # B/c of ext reloading - TODO
     __table_args__ = {'extend_existing': True}
