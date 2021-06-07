@@ -1,16 +1,21 @@
 from pathlib import Path
 import os
 from dataclasses import dataclass
+import logging
 
 import discord
 from textx import metamodel_from_file
 
 DSL_PATH = Path(__file__).parent / 'rewards_dsl'
 
+logger = logging.getLogger('economy.rewards.reward_policy')
+
 # meta model
 rewards_policy_mm = metamodel_from_file(str(DSL_PATH / 'reward.tx'))
 # model
 rewards_policy_m = rewards_policy_mm.model_from_file(DSL_PATH / 'reward_policy.rew')
+
+
 
 # event_name -> event_type -> discord.py event name
 # TODO replace with on_raw_* event where appropriate
@@ -59,6 +64,8 @@ class EventContext:
 
     @classmethod
     async def create(cls, event, event_name, event_type, *args, **kwargs):
+        logger.debug(f'Creating context for {event} ({event_name}-{event_type}) with args {args} and kwargs {kwargs}')
+
         ctx = cls(event=event, event_name=event_name, event_type=event_type)
         if event == 'on_message':
             m = args[0]
@@ -80,6 +87,8 @@ class EventContext:
             ctx.message = ctx.reaction.message
             ctx.original_author = ctx.message.author
             ctx.channel = ctx.message.channel
+        
+        logger.debug(f'Created context {ctx}')
         return ctx
 
     def get_attribute(self, attributes_str):
