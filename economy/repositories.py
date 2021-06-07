@@ -5,13 +5,16 @@ from sqlalchemy import exc, or_
 from economy import models
 
 
-class CurrencyRepository:
+class BaseRepository:
     def __init__(self, session):
         self.session = session
     
-    def add(currency):
-        self.session.add(currency)
+    def add(*args):
+        self.session.add_all(*currency)
 
+
+class CurrencyRepository(BaseRepository):
+    
     @staticmethod
     def get_query(filters=None, load_denoms=True):
         stmt = select(models.Currency)
@@ -53,7 +56,7 @@ class CurrencyRepository:
         currencies = res.scalars().all()
         return currencies
 
-    async def find_currencies_by_denoms(self, denoms):
+    async def find_currency_by_denoms(self, denoms):
         '''Get currency row joined with related denominations given a list with currency symbol and/or denominations.
         
          Parameters
@@ -86,3 +89,78 @@ class CurrencyRepository:
         res = await session.execute(stmt)
         currency = res.unique().scalar_one()
         return currency
+
+
+class WalletRepository(BaseRepository):
+
+    @staticmethod
+    def get_query(filters=None, load_balances=True, load_currencies=True):
+        stmt = select(models.Wallet)
+        if filters:
+            stmt = stmt.filter(*filters)
+        if load_balances:
+            lb = selectinload(models.Wallet.currency_balances)
+            if load_currencies:
+                lb = lb.selectinload(models.CurrencyBalance.currency)
+            stmt = stmt.options(lb)
+        return stmt
+    
+    async def get(self, user_id, **kwargs):
+        """Get wallet by user id.
+        
+         Parameters
+        ----------
+        user_id : int
+            Discord user id
+            
+
+        Raises
+        ------
+        sqlalchemy.exc.NoResultFound
+        sqlalchemy.exc.MultipleResultsFound 
+
+        Returns
+        -------
+        Currency
+        """
+        filters = [models.Wallet.user_id == user_id]
+        stmt = self.get_query(filters, **kwargs)
+        res = await self.session.execute(stmt)
+        wallet = res.scalar_one()
+        return wallet
+    
+    async def get_currency_balance(self, user_id, currency_symbol):
+        """Get currency balance, i.e. the amount of a specific currency in a wallet, by user id and currency eymbol.
+        
+         Parameters
+        ----------
+        user_id : int
+            Discord user id
+        currency_symbol: str
+            Currency symbol
+            
+
+        Raises
+        ------
+        sqlalchemy.exc.NoResultFound
+        sqlalchemy.exc.MultipleResultsFound 
+
+        Returns
+        -------
+        CurrencyBalance
+        """
+        stmt = (
+            select(models.CurrencyBalance).
+            join(models.CurrencyBalance.wallet).
+            where(models.Wallet.user_id == user_id).
+            join(models.CurrencyBalance.currency).
+            where(models.Currency.symbol == currency_symbol).
+            options(
+                joinedload(models.CurrencyBalance.currency)
+            )
+        )
+        res = await self.session.execute(stmt)
+
+        balance = res.scalar_one()
+
+        return balance
