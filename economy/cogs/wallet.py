@@ -65,7 +65,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                 # make sure they have a wallet
                 await self.service.get_or_create_wallet(member.id)
                 currency_amount = await self.service.currency_amount_from_str(currency_str)
-                await self.service.deposit_in_wallet(member.id, currency_amount)
+                await self.service.deposit_in_wallet(member.id, currency_amount, note=f'Initiated by {ctx.author.id} {ctx.author.display_name}')
                 await ctx.reply(f"Deposited amount {currency_amount} into {member.display_name}'s wallet")
             except WalletOpFailedException as e:
                 raise WalletOpFailedException(f"Failed to deposited amount into {member.display_name}'s wallet: {e}")
@@ -88,7 +88,7 @@ class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Pa
                 # make sure they have a wallet
                 await self.service.get_or_create_wallet(member.id)
                 currency_amount = await self.service.currency_amount_from_str(currency_str)
-                await self.service.withdraw_from_wallet(member.id, currency_amount)
+                await self.service.withdraw_from_wallet(member.id, currency_amount, note=f'Initiated by {ctx.author.id} {ctx.author.display_name}')
                 await ctx.reply(f"Withdrew {currency_amount} from {member.display_name}'s wallet")
             except WalletOpFailedException as e:
                 raise WalletOpFailedException(f"Failed to withdraw amount from {member.display_name}'s wallet: {e}")

@@ -41,7 +41,7 @@ class EconomyService:
     
 
     @staticmethod
-    async def update_currency_balance(user_id, currency_amount: dataclasses.CurrencyAmount):
+    async def update_currency_balance(user_id, currency_amount: dataclasses.CurrencyAmount, note=''):
         # assuming user already has an up to date wallet at this point
         try :
             async with db.async_session() as session, session.begin():
@@ -51,19 +51,25 @@ class EconomyService:
                 if amount < 0 and balance.balance + amount < 0:
                     raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
                 balance.balance += amount
+
+                # store transaction log
+                note =  f'{note}: {currency_amount}'
+                transaction = models.TransactionLog(user_id=user_id, currency_id=balance.currency_id, amount=amount, note=note)
+                session.add(transaction)
+
                 return balance
         except exc.NoResultFound as e:
             raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
 
     @staticmethod
-    async def deposit_in_wallet(user_id, currency_amount: dataclasses.CurrencyAmount):
-        await EconomyService.update_currency_balance(user_id, currency_amount)
+    async def deposit_in_wallet(user_id, currency_amount: dataclasses.CurrencyAmount, note=''):
+        await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
 
     @staticmethod
-    async def withdraw_from_wallet(user_id, currency_amount: dataclasses.CurrencyAmount):
+    async def withdraw_from_wallet(user_id, currency_amount: dataclasses.CurrencyAmount, note):
         # subtract
         currency_amount.amount = -currency_amount.amount
-        await EconomyService.update_currency_balance(user_id, currency_amount)
+        await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
 
     @staticmethod
     async def make_payment(sender_id, receiver_id, currency_amount: dataclasses.CurrencyAmount):
@@ -80,6 +86,12 @@ class EconomyService:
                     raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {sender_balance.balance}')
                 sender_balance.balance -= amount
                 receiver_balance.balance += amount
+
+                # store transaction log
+                note =  f'Payment from {sender_id} to {receiver_id} of amount {currency_amount}'
+                transaction = models.TransactionLog(user_id=sender_id, related_user_id=receiver_id, currency_id=sender_balance.currency_id, amount=amount, note=note)
+                session.add(transaction)
+                
         except exc.NoResultFound as e:
             raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
 
