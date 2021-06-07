@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -59,20 +60,35 @@ if os.getenv('LOGGING_LEVEL'):
     LOGGING_LEVEL = os.getenv('LOGGING_LEVEL')
 
 
+LOGS_PATH = Path(__file__).parent / 'logs'
+if not os.path.isdir(LOGS_PATH):
+    os.mkdir(LOGS_PATH)
+
 # passed to logging.config.dictConfig
 LOGGING_CONFIG = {
+    'version': 1,
     'formatters': {
-        'default': logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+        'default': {
+            'format': '%(name)s - %(levelname)s - %(message)s'
+        }
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'level': LOGGING_LEVEL,
             'formatter': 'default',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': logging.ERROR,
+            'formatter': 'default',
+            'filename': LOGS_PATH / 'error.log',
+            'maxBytes': 1024,
+            'backupCount': 5,
         }
     },
     'root': {
         'level': LOGGING_LEVEL,
-        'handlers': ['console']
+        'handlers': ['console', 'error_file']
     }
 }

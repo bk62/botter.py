@@ -1,8 +1,9 @@
 from discord.ext import commands
-import logging
+import logging, logging.config
 import importlib
 import settings
 
+logging.config.dictConfig(settings.LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
 bot = commands.Bot(command_prefix=settings.COMMAND_PREFIX, case_insensitive=True)
