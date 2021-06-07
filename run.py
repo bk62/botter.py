@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import os
+import logging
 
 from keep_alive import keep_alive as flask_keep_alive
 import main, db, economy
@@ -8,6 +9,7 @@ import settings
 import click
 
 
+logger = logging.getLogger('run')
 
 @click.group()
 def cli():
@@ -29,9 +31,11 @@ async def _run_db(init=True, drop=False):
     async with db.engine.begin() as conn:
         if drop:
             click.echo('[*] Dropping db...')
+            logger.info('Dropping db')
             await conn.run_sync(db.Base.metadata.drop_all)
         if init:
             click.echo('[*] Creating db...')
+            logger.info('Creating db')
             await conn.run_sync(db.Base.metadata.create_all)
 
 
@@ -55,6 +59,7 @@ def resetdb():
 @cli.command('clearreplitdb')
 def cleardb():
     """Empty replit-db."""
+    logger.info('Clearing replit-db')
     for k in db.replit_db.keys():
         del db.replit_db[k]
 
@@ -72,6 +77,7 @@ def init(force):
         initdb()
         click.echo('[+] Done.')
     if (no_db or force):
+        logger.info('Adding intial currency')
         click.echo('[+] Adding a currency...')
         economy.create_default_currency()
     else:

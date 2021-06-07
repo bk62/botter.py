@@ -1,8 +1,12 @@
 from discord.ext import commands
 import typing
+import logging
 
 import settings
 from base import BaseCog
+
+
+logger = logging.getLogger('extensions.admin')
 
 
 class AdminCommands(BaseCog, name='Admin', description='Bot Admin Commands'):
@@ -51,11 +55,14 @@ class AdminCommands(BaseCog, name='Admin', description='Bot Admin Commands'):
     )
     async def load(self, ctx, ext):
         try:
+            logger.debug(f'Attempting to load extension {ext}')
             if ext not in settings.ALL_EXTENSIONS.keys():
                 raise commands.errors.ExtensionNotFound()
             self.bot.load_extension(ext)
+            logger.debug(f'Loaded extension {ext}')
             await ctx.reply(f"`{ext}` has successfully been loaded.")
         except commands.errors.ExtensionNotFound:
+            logger.info(f'Failed to load extension {ext}')
             await ctx.reply(f"`{ext}` does not exist!")
 
     @extensions.command(
@@ -67,6 +74,7 @@ class AdminCommands(BaseCog, name='Admin', description='Bot Admin Commands'):
     async def reload(self, ctx, ext):
         extensions = self.bot.extensions
         reloaded = []
+        logger.debug(f'Attempting to reload {ext} extension(s)')
         if ext == 'all':
             for e in extensions:
                 self.bot.unload_extension(e)
@@ -92,6 +100,7 @@ class AdminCommands(BaseCog, name='Admin', description='Bot Admin Commands'):
     )
     async def unload(self, ctx, ext):
         extensions = self.bot.extensions
+        logger.debug(f'Attempting to reload {ext} extension')
         if ext not in extensions:
             await ctx.reply(f'Extension {ext} is not loaded.')
             return

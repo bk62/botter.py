@@ -17,10 +17,10 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
     
     @staticmethod
     async def _create_bpy(**kwargs):
-        """Helper to create an initial currency with spec `BotterPY BPY; description "Default currency."`"""
+        """Helper to create an initial currency with spec `BotterPY BPY; description "Initial currency."`"""
         async with db.async_session() as session:
             async with session.begin():
-                currency = models.Currency(name='BotterPy', symbol='BPY', description="Default currency")
+                currency = models.Currency(name='BotterPy', symbol='BPY', description="Initial currency")
                 session.add(currency)
     
     @commands.group(
