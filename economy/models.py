@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, BigInteger
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, BigInteger, DateTime, func
 from sqlalchemy.orm import relationship
 
 
@@ -87,3 +87,31 @@ class Wallet(Base):
         return f"Wallet(user={self.user.name})"
 
 
+
+class RewardLog(Base):
+    __tablename__ = 'reward_log'
+
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship('User', backref='wallet', lazy='selectin')
+
+    currency_id = Column(Integer, ForeignKey('currency.id'))
+    currency = relationship('Currency', lazy='selectin')
+
+    amount = Column(Numeric(10, 2), default=0.0)
+
+    note = Column(String, nullable=True)
+
+    created = Column(DateTime, server_default=func.now())
+
+    __mapper_args__ = {"eager_defaults": True}
+    # B/c of ext reloading - TODO
+    __table_args__ = {'extend_existing': True}
+
+
+    def __repr__(self):
+        return f"RewardLog(amount={self.amount}, currency={self.currency}, user={self.user.name})"
+    
+    def __str__(self):
+        return f'{self.amount} {self.currency.symbol} to {self.user.name} ({self.user_id}) for {self.note}'
