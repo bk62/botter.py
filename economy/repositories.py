@@ -12,6 +12,7 @@ class CurrencyRepository:
     def add(currency):
         self.session.add(currency)
 
+    @staticmethod
     def get_query(filters=None, load_denoms=True):
         stmt = select(models.Currency)
         if filters:
@@ -20,7 +21,7 @@ class CurrencyRepository:
             stmt = stmt.options(selectinload(models.Currency.denominations))
         return stmt
     
-    async def get(symbol, **kwargs):
+    async def get(self, symbol, **kwargs):
         """Get currency by symbol.
         
          Parameters
@@ -46,12 +47,13 @@ class CurrencyRepository:
         currency = res.scalar_one()
         return currency
     
-    async def find_by(filters=None, **kwargs):
+    async def find_by(self, filters=None, **kwargs):
         stmt = self.get_query(filters, **kwargs)
         res = await self.session.execute(stmt)
         currencies = res.scalars().all()
+        return currencies
 
-    async def find_currencies_by_denoms(denoms):
+    async def find_currencies_by_denoms(self, denoms):
         '''Get currency row joined with related denominations given a list with currency symbol and/or denominations.
         
          Parameters

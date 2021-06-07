@@ -8,9 +8,10 @@ from sqlalchemy import exc
 
 import db
 from base import BaseCog
-from economy import models, util
+from economy import models, util, parsers
 from util import render_template
-from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser
+from economy.parsers import CURRENCY_SPEC_DESC
+from economy.repositories import CurrencyRepository
 
 
 class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):
@@ -41,9 +42,8 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
     async def list(self, ctx, detailed: typing.Optional[bool] = False):
         async with db.async_session() as session:
             # query currencies and denominations
-            stmt = select(models.Currency).options(selectinload(models.Currency.denominations))
-            res = await session.execute(stmt)
-            currencies = res.scalars().all()
+            repo = CurrencyRepository(session)
+            currencies = await repo.find_by()
 
             # if no currencies, send empty message and help on how to add one
             if len(currencies) == 0:
@@ -82,7 +82,7 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
     async def add(self, ctx, *, currency_spec: str):
         try:
             # parse currency info from string
-            currency_dict = util.parse_currency_from_spec(currency_spec)
+            currency_dict = parsers.parse_currency_from_spec(currency_spec)
             currency = models.Currency.from_dict(currency_dict)
 
             # save parsed info
@@ -105,18 +105,16 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
             async with db.async_session() as session:
                 async with session.begin():
                     # get currency obj from db
-                    stmt = (select(models.Currency).
-                            where(models.Currency.symbol == symbol).
-                            options(selectinload(models.Currency.denominations)))
-                    res = await session.execute(stmt)
-                    currency = res.scalar_one()  # raises exception if not found
+                    # raises exception if not found
+                    repo = CurrencyRepository(session)
+                    currency = await repo.get(symbol)
 
                     # parse info from string
-                    currency_dict = util.parse_currency_from_spec(currency_spec)
+                    currency_dict = parsers.parse_currency_from_spec(currency_spec)
 
                     # update found currency obj
                     currency.name = currency_dict['name']
-                    currency.description = currency_dict['description']
+                    currency.description = currency_dict.get('description', None) # optional
                     currency.symbol = currency_dict['symbol']
 
                     # update denominations
@@ -135,6 +133,8 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
         except exc.NoResultFound:
             # Not found
             raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
+        except exc.MultipleResultsFound:
+            raise commands.CommandError(f'Something went horribly wrong. Multiple currencies found with symbol: {symbol}.')
 
     @currency.command(
         name='del', aliases=['d'],
@@ -146,12 +146,9 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
         try:
             async with db.async_session() as session:
                 async with session.begin():
-                    # get currency obj from db
-                    stmt = (select(models.Currency).
-                            where(models.Currency.symbol == symbol).
-                            options(selectinload(models.Currency.denominations)))
-                    res = await session.execute(stmt)
-                    currency = res.scalar_one()  # raises exception if not found
+                    # raises exception if not found
+                    repo = CurrencyRepository(session)
+                    currency = await repo.get(symbol)
 
                     await session.delete(currency)
 
@@ -159,8 +156,10 @@ class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Vi
         except exc.NoResultFound:
             # Not found
             raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
+        except exc.MultipleResultsFound:
+            raise commands.CommandError(f'Something went horribly wrong. Multiple currencies found with symbol: {symbol}.')
 
-
+    ### TODO!!!
     @currency.command(
         name='default',
         usage="no args or 'set_channel <currency_symbol> [@channel mentions]' or 'set_guild <currency_symbol>'",

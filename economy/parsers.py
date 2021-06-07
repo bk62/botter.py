@@ -186,3 +186,16 @@ class CurrencyAmountParser(Parser):
                         f'({node.start}:{node.end})')
                 a = AmountItem(amount=self._last_val, type=node.string, is_denomination=node.element.name == 'r_denomination_name')
                 self._amounts.append(a)
+
+
+# Parsing helpers
+
+def parse_currency_from_spec(currency_spec):
+    parser = CurrencySpecParser(currency_spec)
+    currency_dict = parser.parse()
+    return currency_dict
+
+def parse_currency_amounts(currency_str):
+    parser = CurrencyAmountParser(currency_str)
+    amounts = parser.parse()
+    return amounts

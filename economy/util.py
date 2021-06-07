@@ -10,18 +10,6 @@ def check_mentions_members(ctx):
     return ctx.message.mentions is not None and len(ctx.message.mentions) > 0
 
 
-# Parsing
-
-def parse_currency_from_spec(currency_spec):
-    parser = CurrencySpecParser(currency_spec)
-    currency_dict = parser.parse()
-    return currency_dict
-
-def parse_currency_amounts(currency_str):
-    parser = CurrencyAmountParser(currency_str)
-    amounts = parser.parse()
-    return amounts
-
 
 # replit db - default currency helpers
 def _channel_currency_key(channel_id):
