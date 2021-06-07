@@ -45,6 +45,8 @@ EVENTS = {
 class EventContext:
     """Event context dataclass."""
 
+    rule_name: str = None
+
     event: str = None
     event_name: str = None
     event_type: str = None
@@ -63,10 +65,10 @@ class EventContext:
     reaction: discord.Reaction = None
 
     @classmethod
-    async def create(cls, event, event_name, event_type, *args, **kwargs):
-        logger.debug(f'Creating context for {event} ({event_name}-{event_type}) with args {args} and kwargs {kwargs}')
+    async def create(cls, rule_name, event, event_name, event_type, *args, **kwargs):
+        logger.debug(f'Creating context for rule {rule_name}, event {event} ({event_name}-{event_type}) with args {args} and kwargs {kwargs}')
 
-        ctx = cls(event=event, event_name=event_name, event_type=event_type)
+        ctx = cls(rule_name=rule_name, event=event, event_name=event_name, event_type=event_type)
         if event == 'on_message':
             m = args[0]
             ctx.message = m

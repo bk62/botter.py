@@ -91,7 +91,7 @@ class EconomyService:
                 note =  f'Payment from {sender_id} to {receiver_id} of amount {currency_amount}'
                 transaction = models.TransactionLog(user_id=sender_id, related_user_id=receiver_id, currency_id=sender_balance.currency_id, amount=amount, note=note)
                 session.add(transaction)
-                
+
         except exc.NoResultFound as e:
             raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
 
@@ -136,3 +136,29 @@ class EconomyService:
         
             return wallet, new
 
+
+    # TODO args needlessly long
+    @staticmethod
+    async def grant_reward(reward, ctx, rule_name, event_name, event_type, event):
+        # ensure user has wallet
+        user = ctx.get_attribute(reward.user)
+
+        logger.debug(f'Executing individual reward: {reward.currency_amount.amount} {reward.currency_amount.code} to {user}')
+
+        await EconomyService.get_or_create_wallet(user.id)
+
+        # get currency amount from parsed string
+        currency_str = f'{reward.currency_amount.amount} {reward.currency_amount.code}'
+        currency_amount = await EconomyService.currency_amount_from_str(currency_str)
+
+        # TODO inefficient
+        # deposit reward amount
+        user_id = user.id
+        note = f'Reward for policy rule "{rule_name}" ({event}:{event_name},{event_type})'
+        balance = await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
+    
+        async with db.async_session() as session:
+            async with session.begin():
+                reward_log = models.RewardLog(user_id=user.id, currency=balance.currency, amount=currency_amount.amount, note=f'Reward for policy rule "{rule_name}" ({event}:{event_name},{event_type})')
+                session.add(reward_log)
+  

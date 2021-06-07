@@ -20,33 +20,7 @@ class Rewards(BaseCog, name='Economy.Rewards', description="Rewards in virtual c
         super().__init__(bot, *args, **kwargs)
         self.policy_model = rewards_policy.rewards_policy_m
 
-    # TODO args needlessly long
-    async def exec_reward(self, reward, ctx, rule_name, event_name, event_type, event):
-        wallet_cog: Wallet = self.bot.get_cog('Economy.Wallet')
-
-        # Let's assume Wallet cog is there! TODO
-        # if wallet_cog is None:
-        #     raise Exception('Cannot run Rewards cog without Wallet cog.')
-
-        # ensure user has wallet
-        user = ctx.get_attribute(reward.user)
-
-        logger.debug(f'Executing individual reward: {reward.currency_amount.amount} {reward.currency_amount.code} to {user}')
-
-        await wallet_cog.get_or_create_wallet_embed(user)
-
-        # get currency amount from parsed string
-        currency_str = f'{reward.currency_amount.amount} {reward.currency_amount.code}'
-        currency_amount = await wallet_cog.currency_amount_from_str(currency_str)
-
-        # TODO inefficient - refactor into same transaction
-        # deposit reward amount
-        balance = await wallet_cog.deposit_in_wallet(user.id, currency_amount.symbol, currency_amount.amount)
-        
-        async with db.async_session() as session:
-            async with session.begin():
-                reward_log = models.RewardLog(user_id=user.id, currency=balance.currency, amount=currency_amount.amount, note=f'Reward for policy rule "{rule_name}" ({event}:{event_name},{event_type})')
-  
+    # TODO refactor these into rewards_policy.py
 
     def rule_event_handler(self, rule_name, event_name, event_type, event, conditions, rewards):
         async def eval_conditions(event_context):
@@ -63,11 +37,11 @@ class Rewards(BaseCog, name='Economy.Rewards', description="Rewards in virtual c
         async def exec_rewards(event_context):
             logger.debug(f'Executing reward_policy for rule {rule_name}')
             for reward in rewards:
-                await self.exec_reward(reward, event_context, rule_name, event_name, event_type, event)
+                await self.service.grant_reward(reward, event_context, rule_name, event_name, event_type, event)
 
         async def evt_handler(*args, **kwargs):
             logger.debug(f'Triggered event handler for rule {rule_name} (event_name, event_type, event, args, kwargs)')
-            event_context = await rewards_policy.EventContext.create(event, event_name, event_type, *args, **kwargs)
+            event_context = await rewards_policy.EventContext.create(rule_name, event, event_name, event_type, *args, **kwargs)
             if event_name == 'message' and event_context.message.content.startswith(self.bot.command_prefix):
                 # skip commands to this bot # TODO possible to recog other bots?
                 return
