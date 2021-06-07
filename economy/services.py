@@ -48,12 +48,12 @@ class EconomyService:
                 repo = repositories.WalletRepository(session)
                 balance = await repo.get_currency_balance(user_id, currency_amount.symbol)
                 amount = currency_amount.amount
-                if amount < 0 and balance.balance < amount:
+                if amount < 0 and balance.balance + amount < 0:
                     raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
                 balance.balance += amount
                 return balance
         except exc.NoResultFound as e:
-            raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
+            raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
 
     @staticmethod
     async def deposit_in_wallet(user_id, currency_amount: dataclasses.CurrencyAmount):
@@ -81,7 +81,7 @@ class EconomyService:
                 sender_balance.balance -= amount
                 receiver_balance.balance += amount
         except exc.NoResultFound as e:
-            raise WalletOpFailedException(f'{e}: Currency {currency_symbol} not found')
+            raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
 
 
      # Helpers
