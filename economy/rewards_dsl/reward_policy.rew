@@ -3,7 +3,7 @@
 // no condition
 rule join_bonus
     event member join
-    reward 1 BTC to member
+    reward 1 BPY to member
 end
 
 
@@ -14,7 +14,7 @@ rule cheer_up
     conditions [
         content *= 'sad' and not content *= 'happy'
     ]
-    reward 1 BTC to author
+    reward 1 BPY to author
 end
 
 
@@ -31,7 +31,7 @@ rule polite_bonus
         content ~= 'hi' and channel__name == 'general',
         content ~= 'thank' and channel__name == 'help'
     ]
-    reward 1 BTC to author
+    reward 1 BPY to author
 end
 
 
@@ -47,8 +47,8 @@ rule help_bonus
     // FAILING
         reply == true and channel__name == 'help' or content *= 'welcome'
     ]
-    reward 1 BTC to original_author
-    reward 1 BTC to author
+    reward 1 BPY to original_author
+    reward 1 BPY to author
 end
 
 
@@ -61,9 +61,9 @@ rule reactions_in_general
         channel__name == 'general'
     ]
     // original_author = message author
-    reward 2 BTC to original_author
+    reward 2 BPY to original_author
     // author = reactor
-    reward 1 BTC to author
+    reward 1 BPY to author
 end
 
 
@@ -77,5 +77,5 @@ rule first_to_react_announcements
     // FAILING
         channel__name == 'announcements' and reaction__count == 1
     ]
-    reward 3 btc to author
+    reward 3 BPY to author
 end
