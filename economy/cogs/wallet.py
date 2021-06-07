@@ -12,7 +12,7 @@ from base import BaseCog
 import db
 from util import render_template
 
-from economy import models, queries, util, dataclasses
+from economy import models, util, dataclasses
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser, re_decimal_value
 from economy.exc import WalletOpFailedException
 
