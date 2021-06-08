@@ -320,3 +320,5 @@ class EconomyService:
                 reward_log = models.RewardLog(user_id=user.id, currency=balance.currency, amount=currency_amount.amount, note=note)
                 session.add(reward_log)
   
+    def replace_rewards_policy_file(file):
+        pass

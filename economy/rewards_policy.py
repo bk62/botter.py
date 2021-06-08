@@ -11,14 +11,23 @@ from textx import metamodel_from_file
 
 
 DSL_PATH = Path(__file__).parent / 'rewards_dsl'
+TX_FILE = str(DSL_PATH / 'reward.tx')
+POLICY_FILE = DSL_PATH / 'reward_policy.rew'
 
 logger = logging.getLogger('economy.rewards.reward_policy')
 
 # meta model
-rewards_policy_mm = metamodel_from_file(str(DSL_PATH / 'reward.tx'))
+rewards_policy_mm = metamodel_from_file(TX_FILE)
 # model
-rewards_policy_m = rewards_policy_mm.model_from_file(DSL_PATH / 'reward_policy.rew')
+rewards_policy_m = rewards_policy_mm.model_from_file(POLICY_FILE)
 
+
+def validate_policy_file(fpath):
+    try:
+        rewards_policy_mm.model_from_file(fpath)
+        return True, None
+    except Exception as e:
+        return False, e
 
 @dataclass
 class RewardRuleEvent:

@@ -101,3 +101,7 @@ THEME = {
     'error': 'red',
     'warning': 'orange', 
 }
+
+# Rewards
+
+ENABLE_REWARDS_POLICY_FILE_UPLOAD = True

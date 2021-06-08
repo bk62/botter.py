@@ -1,4 +1,4 @@
-import logging
+import logging, os
 
 import discord
 from discord.ext import commands
@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import db
 from util import render_template
+import settings
 from economy import rewards_policy
 from economy.cogs import Wallet
 from economy import models
@@ -48,12 +49,35 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
         help='Download policy config file. Bot owner only.'
     )
     async def rewards_download_policy(self, ctx):
-        pass
+        file = rewards_policy.POLICY_FILE
+        await ctx.reply('Please download and edit the policy config file below.', file=discord.File(file))
+
     
     @rewards.command(
         name='update_policy',
         help='Update rewards policy. Use download_policy command to download config file. Modify and upload using this command. Bot owner only. Stub.'
     )
     async def rewards_policy_update(self, ctx):
-        pass
+        if not settings.ENABLE_REWARDS_POLICY_FILE_UPLOAD:
+            await self.reply_embed(ctx, 'Error', 'Policy file upload not enabled')
+            return
+        print(ctx.message.attachments)
+        attachments = ctx.message.attachments
+        if not attachments or len(attachments) != 1:
+            await self.reply_embed(ctx, 'Error', 'Please upload the new policy file by itself.')
+            return
+        attachment = attachments[0]
+        upload_path = rewards_policy.DSL_PATH / 'uploaded_policy_file.rew'
+        try:
+            await attachment.save(upload_path)
+            valid, e = rewards_policy.validate_policy_file(upload_path)
+            if not valid:
+                raise e
+        except Exception as e:
+            if settings.DEBUG and ctx.author.id == self.bot.author_id:
+                fields = [dict(name='Error message', value=str(e), inline=False)]
+            await self.reply_embed(ctx, 'Error', 'Uploaded policy file is not valid.', fields=fields)
+            os.remove(upload_path)
+            return
+        await self.reply_embed(ctx, 'Sucess', 'New policy file was uploaded. Now you just have to run `./run.py replace_policy_file` and restart the bot for the new policy to take effect.')
     
