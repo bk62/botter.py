@@ -167,6 +167,8 @@ class WalletRepository(BaseRepository):
 
         return balance
 
+    #
+    # TransactionLog:
     @staticmethod
     def get_transactions_query(filters=None):
         related_user_alias = aliased(User)
@@ -205,6 +207,47 @@ class WalletRepository(BaseRepository):
         else:
             filters = (condition,)
         stmt = self.get_transactions_query(filters)
+        res = await self.session.execute(stmt)
+        logs = res.scalars().all()
+        return logs
+
+    #
+    # RewardLog:
+    @staticmethod
+    def get_reward_logs_query(filters=None):
+        stmt = (
+            select(models.RewardLog).
+            join(models.RewardLog.user).
+            join(models.RewardLog.currency).
+            filter(
+                *filters
+            ).
+            options(
+                contains_eager(models.RewardLog.user),
+                contains_eager(models.RewardLog.currency)
+            )
+            
+        )
+        return stmt
+    
+    async def find_rewards_by(self, user_ids=None, symbols=None):
+        filters = []
+        if user_ids:
+            filters.append(User.id.in_(user_ids))
+        if symbols:
+            filters.append(models.Currency.symbol.in_(symbols))
+        stmt = self.get_reward_logs_query(filters)
+        res = await self.session.execute(stmt)
+        logs = res.scalars().all()
+        return logs
+    
+    async def find_user_rewards(self, user_id, symbol=None):
+        condition = User.id == user_id
+        if symbol:
+            filters = (condition, models.Currency.symbol == symbol)
+        else:
+            filters = (condition,)
+        stmt = self.get_rewards_query(filters)
         res = await self.session.execute(stmt)
         logs = res.scalars().all()
         return logs

@@ -27,4 +27,5 @@ def setup(bot):
 
 
 def create_initial_currency():
+    service = EconomyService()
     asyncio.run(service.create_initial_currency())

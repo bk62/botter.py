@@ -150,4 +150,4 @@ class RewardLog(Base):
         return f"RewardLog(amount={self.amount}, currency={self.currency}, user={self.user.name})"
     
     def __str__(self):
-        return f'{self.created} {self.amount} {self.currency.symbol} to {self.user.name} ({self.user_id}) for {self.note}'
+        return f'{self.created} {self.amount} {self.currency.symbol} to {self.user.name} ({self.user_id})\nNote: {self.note}\n'
