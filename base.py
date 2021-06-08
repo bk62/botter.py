@@ -10,11 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class BaseCog(commands.Cog):
-    def __init__(self, bot, service=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         
         self.bot = bot
-        self.service = service
 
 
     async def cog_command_error(self, ctx, command_error):

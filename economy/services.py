@@ -1,4 +1,7 @@
+import functools
 import logging
+from contextlib import AsyncExitStack
+from functools import wraps
 
 from sqlalchemy import exc
 
@@ -11,17 +14,88 @@ from economy.exc import WalletOpFailedException
 logger = logging.getLogger('economy.EconomyService')
 
 
+def async_with_session(begin=False):
+    """Decorator to run service methods in service context and/or session begin context."""
+    def decorator(method):
+        @wraps(method)
+        async def wrapper(self, *args, **kwargs):
+            coroutine = method(self, *args, **kwargs)
+            return await self.await_with_cm(coroutine)
+        return wrapper
+    return decorator
+
 
 class EconomyService:
     """Service class to hold domain logic and/or connect various cogs, parsers, models etc.
+
+        e.g.
+        ```
+        service = EconomyService()
+
+         with service, service.session.begin():
+           ...
+         # or
+         with service(begin=True):
+           ...
+        ```
     """
-    @staticmethod
-    async def create_initial_currency(**kwargs):
+    def __init__(self, async_session=db.async_session):
+        self.async_session = async_session
+        self.session = None
+
+    async def __aenter__(self):
+        # sessionmaker creates async session.
+        self.session = self.async_session()
+        # then we enter its context
+        await self.async_session().__aenter__()
+        return self.session
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.session.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def await_with_cm(self, coroutine, begin=True):
+        """Await coroutine methods with service context manager
+
+        Helper to allow putting multiple service method calls into the same sqlalchemy transaction.
+
+        For example, if you wanted to combine queries from a discord.py cog command into a single DB transaction.
+
+        E.g.
+        ```
+        service = EconomyService()
+        coro1 = service.get_all_currencies()
+        coro2 = service.get_all_denominations()
+
+        asyn def get_currencies_and_denoms():
+            currencies = await coro1
+            denoms = await coro2
+            return currencies, denoms
+
+        currencies, denoms = await service.await_with_cm(get_currencies_and_denoms())
+        ```
+        """
+        async with AsyncExitStack() as stack:
+            # enter Service context
+            await stack.enter_async_context(self)
+            if begin:
+                # enter session.begin context
+                await stack.enter_async_context(self.session.begin())
+            return await coroutine
+
+    async def get_all_currencies(self):
+        repo = repositories.CurrencyRepository(self.session)
+        return await repo.find_by()
+
+    @async_with_session(begin=True)
+    async def create_currency(self, **kwargs):
+        c = models.Currency(**kwargs)
+        self.session.add(c)
+        return c
+
+    async def create_initial_currency(self):
         """Helper to create an initial currency with spec `BotterPY BPY; description "Initial currency."`"""
-        async with db.async_session() as session:
-            async with session.begin():
-                currency = models.Currency(name='BotterPy', symbol='BPY', description="Initial currency")
-                session.add(currency)
+        data = dict(name='BotterPy', symbol='BPY', description="Initial currency")
+        await self.create_currency(**data)
     
     @staticmethod
     async def currency_amount_from_str(currency_str):

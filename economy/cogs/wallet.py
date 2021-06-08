@@ -15,9 +15,10 @@ from util import render_template
 from economy import models, util, dataclasses
 from economy.parsers import CURRENCY_SPEC_DESC, CurrencySpecParser, CurrencyAmountParser, re_decimal_value
 from economy.exc import WalletOpFailedException
+from .base import BaseEconomyCog
 
 
-class Wallet(BaseCog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
+class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
 
     #
     # Admin commands:

@@ -7,15 +7,16 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import exc
 
 import db
-from base import BaseCog
+from .base import BaseEconomyCog
 from economy import models, util, parsers
 from util import render_template
 from economy.parsers import CURRENCY_SPEC_DESC
 from economy.repositories import CurrencyRepository
 
 
-class Currency(BaseCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):
-    
+class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):
+
+
     @commands.group(
         name='currency', aliases=['cur'],
         help="Manage virtual currencies. List, create, edit and delete currencies.",

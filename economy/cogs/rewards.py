@@ -5,17 +5,18 @@ from discord.ext import commands
 from sqlalchemy.exc import SQLAlchemyError
 
 import db
-from base import BaseCog
 from util import render_template
 from economy import rewards_policy
 from economy.cogs import Wallet
 from economy import models
+from .base import BaseEconomyCog
+
 
 
 logger = logging.getLogger('economy.rewards.RewardsCog')
 
 
-class Rewards(BaseCog, name='Economy.Rewards', description="Rewards in virtual currencies."):
+class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in virtual currencies."):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(bot, *args, **kwargs)
         self.policy_engine = rewards_policy.RewardsPolicyEngine(service=self.service, bot=self.bot.command_prefix)
