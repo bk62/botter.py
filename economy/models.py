@@ -120,7 +120,7 @@ class TransactionLog(Base):
         return f"TransactionLog(amount={self.amount}, currency={self.currency}, user={self.user.name}, related={self.related_user.name})"
     
     def __str__(self):
-        return f'{self.created} {self.amount} {self.currency.symbol} User: {self.user.name} ({self.user_id}), Related user: {self.related_user.name} ({self.related_user_id}), for {self.note}'
+        return f'{self.created} {self.amount} {self.currency.symbol} User: {self.user.name} ({self.user_id}), Related user: {self.related_user.name} ({self.related_user_id})\n[Note: {self.note}]\n'
 
 
 

@@ -1,7 +1,9 @@
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload, joinedload, contains_eager, aliased
 from sqlalchemy import exc, or_
 
+
+from db import User
 from economy import models
 
 
@@ -164,3 +166,45 @@ class WalletRepository(BaseRepository):
         balance = res.scalar_one()
 
         return balance
+
+    @staticmethod
+    def get_transactions_query(filters=None):
+        related_user_alias = aliased(User)
+        stmt = (
+            select(models.TransactionLog).
+            join(models.TransactionLog.user).
+            outerjoin(related_user_alias, models.TransactionLog.related_user).
+            join(models.TransactionLog.currency).
+            filter(
+                *filters
+            ).
+            options(
+                contains_eager(models.TransactionLog.user),
+                contains_eager(models.TransactionLog.related_user),
+                contains_eager(models.TransactionLog.currency)
+            )
+            
+        )
+        return stmt
+
+    async def find_transactions_by(self, user_ids=None, symbols=None):
+        filters = []
+        if user_ids:
+            filters.append(User.id.in_(user_ids))
+        if symbols:
+            filters.append(models.Currency.symbol.in_(symbols))
+        stmt = self.get_transactions_query(filters)
+        res = await self.session.execute(stmt)
+        logs = res.scalars().all()
+        return logs
+    
+    async def find_user_transactions(self, user_id, symbol=None):
+        condition = User.id == user_id
+        if symbol:
+            filters = (condition, models.Currency.symbol == symbol)
+        else:
+            filters = (condition,)
+        stmt = self.get_transactions_query(filters)
+        res = await self.session.execute(stmt)
+        logs = res.scalars().all()
+        return logs

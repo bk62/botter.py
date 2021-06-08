@@ -93,6 +93,35 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
                 await self.reply_embed(ctx, 'Success', f"Withdrew {currency_amount} from {member.display_name}'s wallet")
             except WalletOpFailedException as e:
                 raise WalletOpFailedException(f"Failed to withdraw amount from {member.display_name}'s wallet: {e}")
+    
+    @econ.command(
+        name='transactions',
+        help='View transactions. Filter by currencies and/or members.',
+        usage="<@member mentions> <currency_symbol>",
+        alias="logs"
+    )
+    async def econ_transactions(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: typing.Optional[str] = None):
+        if isinstance(members, discord.Member):
+            # only one member
+            members = [members]
+        member_ids = None
+        if members and len(members) > 0:
+            member_ids = [member.id for member in members]
+        currency_symbols = None
+        if currency_str:
+            currency_symbols = [
+                c.strip() for c in currency_str.split()
+            ]
+        find_all = self.service.wallet_repo.find_transactions_by(member_ids, currency_symbols)
+        transactions = await self.service(find_all)
+        
+        if len(transactions) < 1:
+            await self.reply_embed(ctx, 'Error', 'No transactions in database')
+            return
+
+        data = dict(title=f'Transactions\n\n[{len(transactions)} results filtered by member id in {member_ids}, currency symbol in {currency_symbols}]', object_list=transactions)
+        text = await render_template('base_list.txt.jinja2', data)
+        await ctx.reply(text)
 
     #
     # Normal users:
@@ -132,3 +161,25 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
             except WalletOpFailedException as e:
                 raise WalletOpFailedException(
                     f"Failed to make payment from {ctx.author.display_name} to {member.display_name}: {e}")
+
+    @commands.command(
+        help='View your transactions. Filter by currencies.',
+        usage="<currency_symbol>",
+        alias="logs"
+    )
+    async def transactions(self, ctx, *, currency_str: typing.Optional[str] = None):
+        currency_symbols = None
+        if currency_str:
+            currency_symbols = [
+                c.strip() for c in currency_str.split()
+            ]
+        find_all = self.service.wallet_repo.find_user_transactions(ctx.author.id, currency_symbols)
+        transactions = await self.service(find_all)
+        
+        if len(transactions) < 1:
+            await self.reply_embed(ctx, 'Error', 'No transactions in database')
+            return
+
+        data = dict(title=f'Transactions\n\n[{len(transactions)} results filtered by currency symbol in {currency_symbols}]', object_list=transactions)
+        text = await render_template('base_list.txt.jinja2', data)
+        await ctx.reply(text)
