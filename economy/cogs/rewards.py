@@ -19,7 +19,7 @@ logger = logging.getLogger('economy.rewards.RewardsCog')
 class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in virtual currencies."):
     def __init__(self, bot, *args, **kwargs):
         super().__init__(bot, *args, **kwargs)
-        self.policy_engine = rewards_policy.RewardsPolicyEngine(service=self.service, bot=self.bot.command_prefix)
+        self.policy_engine = rewards_policy.RewardsPolicyEngine(service=self.service, bot=self.bot)
 
     def init_policy(self):
         for evt_handler, rule_event in self.policy_engine.interpret_policy():
