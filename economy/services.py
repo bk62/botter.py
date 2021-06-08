@@ -255,8 +255,7 @@ class EconomyService:
 
 
      # Helpers
-    @staticmethod
-    async def get_or_create_wallet(user_id):
+    async def get_or_create_wallet(self, user_id):
         """
         Get a user's wallet.
         
@@ -265,11 +264,9 @@ class EconomyService:
         Also, handles creating wallet balances associated with currencies added since the last time the wallet was updated.
         """
         new = False
-        async with db.async_session() as session, session.begin():
-            # get currency obj from db
-            repo = repositories.WalletRepository(session)
+        async with self, self.session.begin():
             try:
-                wallet = await repo.get(user_id)
+                wallet = await self.wallet_repo.get(user_id)
             except exc.NoResultFound:
                 # Not found
                 # create a wallet for user
@@ -277,20 +274,26 @@ class EconomyService:
                 logger.debug(f'Creating wallet for {user_id}')
                 u = db.User(id=user_id)
                 wallet = models.Wallet(user=u)
-                session.add(u)
-                session.add(wallet)
+                self.session.add(u)
+                self.session.add(wallet)
+                await self.session.flush()
                 new = True
+
+                # query it again -- b/c we'll need currency balances loaded
+                wallet = await self.wallet_repo.get(user_id)
 
             # get all currencies to ensure any newly added currencies
             # are also added to the user's wallet
-            currency_repo = repositories.CurrencyRepository(session)
-            all_currencies = await currency_repo.find_by()
             wallet_currencies = set(b.currency for b in wallet.currency_balances)
 
+            all_currencies = set(await self.currency_repo.find_by())
+            diff = all_currencies - wallet_currencies
             # create balances for all currencies not in wallet
-            for c in set(all_currencies) - wallet_currencies:
+            for c in diff:
                 b = models.CurrencyBalance(wallet=wallet, currency=c)
-                session.add(b)
+                self.session.add(b)
+            
+            await self.session.flush()
         
             return wallet, new
 
