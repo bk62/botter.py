@@ -71,7 +71,7 @@ class Currency(BaseEconomyCog, name='Economy.Currency',
             async with self.service as s, s.begin():
                 currency = await self.service.add_currency(currency_dict)
 
-            await ctx.reply(f'Added currency {currency.name} {currency.symbol}')
+            await self.reply_embed(ctx, 'Success', f'Added currency {currency.name} {currency.symbol}')
         except SyntaxError as e:
             raise commands.CommandError(f'Error parsing currency spec: {e.msg}')
 
@@ -91,7 +91,7 @@ class Currency(BaseEconomyCog, name='Economy.Currency',
             coro = self.service.update_currency(symbol, currency_dict)
             currency = await self.service(coro)
 
-            await ctx.reply(f'Updated currency {currency.name} {currency.symbol}')
+            await self.reply_embed(ctx, 'Success', f'Updated currency {currency.name} {currency.symbol}')
         except SyntaxError as e:
             raise commands.CommandError(f'Error parsing currency spec: {e.msg}')
         except exc.NoResultFound:
@@ -110,7 +110,7 @@ class Currency(BaseEconomyCog, name='Economy.Currency',
     async def delete(self, ctx, symbol: str):
         try:
             currency = await self.service.del_currency(symbol)
-            await ctx.reply(f'Deleted currency {currency}')
+            await self.reply_embed(ctx, 'Success', f'Deleted currency {currency}')
         except exc.NoResultFound:
             # Not found
             raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
