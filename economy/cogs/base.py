@@ -8,8 +8,8 @@ class BaseEconomyCog(BaseCog):
 
         if service_cls is None:
             service_cls = EconomyService
-        self._service_cls = service_cls
+        self._service = service_cls()
 
     @property
     def service(self):
-        return self._service_cls()
+        return self._service

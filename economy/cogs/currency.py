@@ -11,12 +11,10 @@ from .base import BaseEconomyCog
 from economy import models, util, parsers
 from util import render_template
 from economy.parsers import CURRENCY_SPEC_DESC
-from economy.repositories import CurrencyRepository
 
 
-class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Manage Virtual Currencies. Bot owner only.'):
-
-
+class Currency(BaseEconomyCog, name='Economy.Currency',
+               description='Economy: Manage Virtual Currencies. Bot owner only.'):
     @commands.group(
         name='currency', aliases=['cur'],
         help="Manage virtual currencies. List, create, edit and delete currencies.",
@@ -32,39 +30,31 @@ class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Ma
         help="List currencies.",
         brief="List currencies",
     )
-    async def list(self, ctx, detailed: typing.Optional[bool] = False):
-        async with db.async_session() as session:
-            # query currencies and denominations
-            repo = CurrencyRepository(session)
-            currencies = await repo.find_by()
+    async def list(self, ctx, brief: typing.Optional[bool] = False):
+        # query currencies and denominations
+        find_all = self.service.get_all_currencies()
+        currencies = await self.service.await_with(find_all)
 
-            # if no currencies, send empty message and help on how to add one
-            if len(currencies) == 0:
-                await ctx.reply(await render_template('empty_currency_list.jinja2'))
-                await ctx.send_help(self.add)
-                return
-
-            if detailed:
-                # embed currency details
-                embed = {
-                    'title': 'Currencies:',
-                    'fields': [
-                    ]
-                }
-                for c in currencies:
-                    embed['fields'].append({'name': f'{c.name} {c.symbol}', 'value': f'{c.description}'})
-                    for d in c.denominations:
-                        embed['fields'].append(
-                            {'name': f'{d.name}', 'value': str(d.value), 'inline': True}
-                        )
-                await ctx.reply(embed=discord.Embed.from_dict(embed))
-                return
-            else:
-                # Brief list
-                data = dict(title='Currencies:', object_list=currencies)
-                text = await render_template('currency_list.txt.jinja2', data)
-                await ctx.reply(text)
+        # if no currencies, send empty message and help on how to add one
+        if len(currencies) == 0:
+            await ctx.reply(await render_template('empty_currency_list.jinja2'))
+            # await ctx.send_help(self.add)
             return
+
+        if brief:
+            # Brief list
+            data = dict(title='Currencies:', object_list=currencies)
+            text = await render_template('currency_list.txt.jinja2', data)
+            await ctx.reply(text)
+        else:
+            # embed currency details
+            embed = discord.Embed(title='Currencies:')
+            for c in currencies:
+                embed.add_field(name=str(c), value=f'{c.description}', inline=False)
+                for d in c.denominations:
+                    embed.add_field(name=f'{d.name}', value=str(d.value), inline=True)
+            await ctx.reply(embed=embed)
+        return
 
     @currency.command(
         name='add', aliases=['a'],
@@ -76,12 +66,10 @@ class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Ma
         try:
             # parse currency info from string
             currency_dict = parsers.parse_currency_from_spec(currency_spec)
-            currency = models.Currency.from_dict(currency_dict)
 
             # save parsed info
-            async with db.async_session() as session:
-                async with session.begin():
-                    session.add(currency)
+            async with self.service as s, s.begin():
+                currency = await self.service.add_currency(currency_dict)
 
             await ctx.reply(f'Added currency {currency.name} {currency.symbol}')
         except SyntaxError as e:
@@ -95,30 +83,13 @@ class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Ma
     )
     async def edit(self, ctx, symbol: str, *, currency_spec: str):
         try:
-            async with db.async_session() as session:
-                async with session.begin():
-                    # get currency obj from db
-                    # raises exception if not found
-                    repo = CurrencyRepository(session)
-                    currency = await repo.get(symbol)
+            # parse info from string
+            currency_dict = parsers.parse_currency_from_spec(currency_spec)
 
-                    # parse info from string
-                    currency_dict = parsers.parse_currency_from_spec(currency_spec)
-
-                    # update found currency obj
-                    currency.name = currency_dict['name']
-                    currency.description = currency_dict.get('description', None) # optional
-                    currency.symbol = currency_dict['symbol']
-
-                    # update denominations
-                    # - delete old ones
-                    for d in currency.denominations:
-                        await session.delete(d)
-                    # - add new ones, if any
-                    ds = currency_dict.pop('denominations', {})
-                    for name, val in ds.items():
-                        denom = models.Denomination(name=name, value=val, currency=currency)
-                        session.add(denom)
+            # update and get currency obj from db
+            # raises exception if not found
+            coro = self.service.update_currency(symbol, currency_dict)
+            currency = await self.service(coro)
 
             await ctx.reply(f'Updated currency {currency.name} {currency.symbol}')
         except SyntaxError as e:
@@ -127,7 +98,8 @@ class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Ma
             # Not found
             raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
         except exc.MultipleResultsFound:
-            raise commands.CommandError(f'Something went horribly wrong. Multiple currencies found with symbol: {symbol}.')
+            raise commands.CommandError(
+                f'Something went horribly wrong. Multiple currencies found with symbol: {symbol}.')
 
     @currency.command(
         name='del', aliases=['d'],
@@ -137,20 +109,14 @@ class Currency(BaseEconomyCog, name='Economy.Currency', description='Economy: Ma
     )
     async def delete(self, ctx, symbol: str):
         try:
-            async with db.async_session() as session:
-                async with session.begin():
-                    # raises exception if not found
-                    repo = CurrencyRepository(session)
-                    currency = await repo.get(symbol)
-
-                    await session.delete(currency)
-
-            await ctx.reply(f'Deleted currency {currency.name} {currency.symbol}')
+            currency = await self.service.del_currency(symbol)
+            await ctx.reply(f'Deleted currency {currency}')
         except exc.NoResultFound:
             # Not found
             raise commands.CommandError(f'Error finding currency with symbol: {symbol}')
         except exc.MultipleResultsFound:
-            raise commands.CommandError(f'Something went horribly wrong. Multiple currencies found with symbol: {symbol}.')
+            raise commands.CommandError(
+                f'Something went horribly wrong. Multiple currencies found with symbol: {symbol}.')
 
     ### TODO!!!
     @currency.command(

@@ -6,11 +6,11 @@ from economy import models
 
 
 class BaseRepository:
-    def __init__(self, session):
+    def __init__(self, session=None):
         self.session = session
-    
-    def add(*args):
-        self.session.add_all(*currency)
+
+    def add(self, *args):
+        self.session.add_all(*args)
 
 
 class CurrencyRepository(BaseRepository):

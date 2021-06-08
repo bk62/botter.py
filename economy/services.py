@@ -20,9 +20,34 @@ def async_with_session(begin=False):
         @wraps(method)
         async def wrapper(self, *args, **kwargs):
             coroutine = method(self, *args, **kwargs)
-            return await self.await_with_cm(coroutine)
+            return await self.await_with(coroutine)
         return wrapper
     return decorator
+
+
+class RepositoryDescriptor:
+    """Repository descriptor to instantiate a new repository class on get.
+
+     - Adds a list of repository attribute names to owner class' '_repositories' attr for later access by instances looking for all repos.
+     - Instantiated repos are also added to instance's '_instantiated_repositories' attr dict keyed by descriptor name.
+     """
+    def __init__(self, repository_class, *args, **kwargs):
+        self.repository_class = repository_class
+        self.args = args
+        self.kwargs = kwargs
+
+    def __set_name__(self, owner, name):
+        self.name = name
+        owner_repos = getattr(owner, '_repositories', [])
+        owner_repos.append(name)
+        setattr(owner, '_repositories', owner_repos)
+
+    def __get__(self, instance, owner):
+        repo = self.repository_class(instance.session, *self.args, **self.kwargs)
+        repo_instances = getattr(instance, '_instantiated_repositories', {})
+        repo_instances[self.name] = repo
+        setattr(instance, '_instantiated_repositories', repo_instances)
+        return repo
 
 
 class EconomyService:
@@ -43,17 +68,31 @@ class EconomyService:
         self.async_session = async_session
         self.session = None
 
+    def _update_repo_sessions(self):
+        """Update any pre-existing repository instances with session.
+
+        Allows calling repo coroutine methods without calling them in order to run later with
+        service await_with method.
+        """
+        for repo_name, repo in getattr(self, '_instantiated_repositories', {}).items():
+            if repo is not None:
+                repo.session = self.session
+
     async def __aenter__(self):
         # sessionmaker creates async session.
         self.session = self.async_session()
         # then we enter its context
         await self.async_session().__aenter__()
+
+        self._update_repo_sessions()
+
         return self.session
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self._instantiated_repositories = {}
         await self.session.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def await_with_cm(self, coroutine, begin=True):
+    async def await_with(self, coroutine, *args, begin=True, **kwargs):
         """Await coroutine methods with service context manager
 
         Helper to allow putting multiple service method calls into the same sqlalchemy transaction.
@@ -71,7 +110,7 @@ class EconomyService:
             denoms = await coro2
             return currencies, denoms
 
-        currencies, denoms = await service.await_with_cm(get_currencies_and_denoms())
+        currencies, denoms = await service.await_with(get_currencies_and_denoms())
         ```
         """
         async with AsyncExitStack() as stack:
@@ -82,17 +121,22 @@ class EconomyService:
                 await stack.enter_async_context(self.session.begin())
             return await coroutine
 
-    @property
-    def currency_repo(self):
-        return repositories.CurrencyRepository(self.session)
+    async def __call__(self, coroutine, *args, **kwargs):
+        return await self.await_with(coroutine, *args, **kwargs)
 
-    @property
-    def wallet_repo(self):
-        return repositories.WalletRepository(self.session)
+    currency_repo = RepositoryDescriptor(repositories.CurrencyRepository)
+    wallet_repo = RepositoryDescriptor(repositories.WalletRepository)
+
+    # @property
+    # def currency_repo(self):
+    #     return repositories.CurrencyRepository(service=self)
+    #
+    # @property
+    # def wallet_repo(self):
+    #     return repositories.WalletRepository(service=self)
 
     async def get_all_currencies(self):
-        repo = repositories.CurrencyRepository(self.session)
-        return await repo.find_by()
+        return await self.currency_repo.find_by()
 
     @async_with_session(begin=True)
     async def create_currency(self, **kwargs):
@@ -104,6 +148,37 @@ class EconomyService:
         """Helper to create an initial currency with spec `BotterPY BPY; description "Initial currency."`"""
         data = dict(name='BotterPy', symbol='BPY', description="Initial currency")
         await self.create_currency(**data)
+
+    async def add_currency(self, currency_dict):
+        currency = models.Currency.from_dict(currency_dict)
+        self.session.add(currency)
+        return currency
+
+    async def update_currency(self, symbol, currency_dict):
+        currency = await self.currency_repo.get(symbol)
+
+        # update
+        currency.name = currency_dict['name']
+        currency.description = currency_dict.get('description', None)  # optional
+        currency.symbol = currency_dict['symbol']
+
+        # update denominations
+        # - delete old ones
+        for d in currency.denominations:
+            await self.session.delete(d)
+        # - add new ones, if any
+        ds = currency_dict.pop('denominations', {})
+        for name, val in ds.items():
+            denom = models.Denomination(name=name, value=val, currency=currency)
+            self.session.add(denom)
+
+        return currency
+
+    @async_with_session(begin=True)
+    async def del_currency(self, symbol):
+        currency = await self.currency_repo.get(symbol)
+        await self.session.delete(currency)
+        return currency
     
     @staticmethod
     async def currency_amount_from_str(currency_str):
