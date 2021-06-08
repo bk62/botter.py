@@ -26,7 +26,7 @@ WIP
 
 
 ### Parsing
-I think one of the more interesting things I could try to do with a discord bot is try figure out ways to use custom syntaxes and parsers to help make these bot more useful without making it too complicated.
+An interesting to do with a discord bot is to figure out ways to use custom syntaxes and parsers to help make them more useful or more convenient. That is, something more complex than regular expressions and/or splitting on delimeters but less than analyzing naturarl language using ML algorithms or AI chatbots.
 
 #### Currency 
 
@@ -64,10 +64,9 @@ The economy extension, (using the `CurrencySpec` grammar and parser) is able to 
 
 #### Reward Policies
 
+Having implemented currency spec and currency amount parsers, I needed a way to allow guild admins to reward members for various actions with their custom currencies. One way was to let them write their own `discord.py` event handlers and connect them to the `botter.py` database. The more fun way was to attempt to write a DSL to define reward policies in a text configuration file.
 
-WIP - Doesn't work yet.
-
-The idea here was to let guild admins define reward policies with a simple DSL -- intended to be more of a proof of concept than an efficient execution.
+The idea here was to let guild admins define reward policies with a simple DSL -- intended more to be more of a proof of concept than to be expressive or execute efficiently.
 
 For example, the following rule would reward new members (assuming a currency with symbol BTC was previously added)
 ```
@@ -111,14 +110,15 @@ end
 Similarly to Django ORM queries, you can add `__` to access nested attributes. Multiple conditions can being added and are combined with an 'OR' operator.
 
 
-Attributes like 'channel' and 'content' are added depending on the event and the context. Since this is a work in progress, the errors are opaque and there is no documentation.
+Attributes like 'channel' and 'content' are added depending on the event and the context. Since this is a work in progress, the errors are opaque and there is no documentation -- I'll add them when I'm able to.
 
-Here are a few more examples:
+Here are a few more examples that don't all work:
 
 ```
 // Reply in the help channel *or* reply with welcome anywhere
 // Note: No parenthesis so left to right precedence
 // multiple rewards
+// Note: Fails
 rule help_bonus
     event message send
     conditions [
@@ -145,7 +145,7 @@ end
 
 
 // First to react with new reaction in announcements gets a bonus
-// TODO lt, gt etc
+// Note: Fails
 rule first_to_react_announcements
     event reaction add
     conditions [
@@ -156,6 +156,9 @@ end
 
 ```
 A policy document contains multiple rules. The `economy.cogs.rewards.Rewards` cog handles adding event listeners to enforce each rule.
+
+Obvious deficiencies in the DSL are lack of comparisions, date parsing (e.g. for rules based on date since a user joined a server), more expressive conditionals, defining conditional names and referring to them in multiple rules (e.g. in_help_channel = channel__name == 'help') etc.
+
 
 (The implementation of the DSL (using textx) is in `economy/rewards_dsl`.)
 
