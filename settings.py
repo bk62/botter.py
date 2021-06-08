@@ -93,3 +93,11 @@ LOGGING_CONFIG = {
         'handlers': ['console', 'error_file']
     }
 }
+
+
+# Embed color theme
+THEME = {
+    'success': 'green',
+    'error': 'red',
+    'warning': 'orange', 
+}

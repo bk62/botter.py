@@ -1,5 +1,8 @@
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from discord.ext import commands
+import discord
+
+import settings
 
 #
 # Jinja2 templating:
@@ -40,3 +43,9 @@ def dump_command_ctx(ctx):
     }
     for attr, inline in attrs.items():
         yield attr, getattr(ctx, attr, None), inline
+
+def str_2_color(color):
+    if color in settings.THEME:
+        color = settings.THEME[color]
+    color = getattr(discord.Colour, color, None)
+    return color() if color else discord.Embed.Empty

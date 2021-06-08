@@ -28,7 +28,7 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
     )
     async def econ(self, ctx):
         if ctx.invoked_subcommand is None:
-            ctx.send_help(self.econ)
+            await ctx.send_help(self.econ)
 
     @econ.command(
         help="View member wallets",
@@ -36,7 +36,7 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
     )
     async def view_wallets(self, ctx, *, members: commands.Greedy[discord.Member] = None):
         if not util.check_mentions_members(ctx):
-            await ctx.send(
+            await self.reply_embed(ctx, 'Error', 
                 f'Invalid: You must specify users by mentioning them.')
             return
         if isinstance(members, discord.Member):

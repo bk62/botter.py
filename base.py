@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 import settings
-from util import dump_command_ctx
+from util import dump_command_ctx, str_2_color
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class BaseCog(commands.Cog):
 
 
     async def cog_command_error(self, ctx, command_error):
-        embed = discord.Embed(title='Something went wrong..', description=str(command_error))
+        embed = discord.Embed(title='Something went wrong..', description=str(command_error), colour=discord.Colour.red())
         if settings.DEBUG and ctx.author.id == self.bot.author_id:
             # Log detail into context if in DEBUG mode
             # and command author is bot owner
@@ -32,8 +32,11 @@ class BaseCog(commands.Cog):
         raise command_error
 
 
-    async def reply_embed(self, ctx, title, desc='', footer=None, fields=None, image_url=None, file=None):
-        embed = discord.Embed(title=title, description=desc)
+    async def reply_embed(self, ctx, title, desc='', footer=None, fields=None, image_url=None, file=None, color=discord.Embed.Empty):
+        if color == discord.Embed.Empty or type(color) == str:
+            color = str_2_color(color if color else title.lower())
+
+        embed = discord.Embed(title=title, description=desc, colour=color)
         reply_kwargs = {} 
         if fields:
             for f in fields:
@@ -44,5 +47,6 @@ class BaseCog(commands.Cog):
             embed.set_image(image_url)
         if file:
             reply_kwargs['file'] = file
+        
         await ctx.reply(embed=embed, **reply_kwargs)
         
