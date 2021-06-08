@@ -82,6 +82,14 @@ class EconomyService:
                 await stack.enter_async_context(self.session.begin())
             return await coroutine
 
+    @property
+    def currency_repo(self):
+        return repositories.CurrencyRepository(self.session)
+
+    @property
+    def wallet_repo(self):
+        return repositories.WalletRepository(self.session)
+
     async def get_all_currencies(self):
         repo = repositories.CurrencyRepository(self.session)
         return await repo.find_by()

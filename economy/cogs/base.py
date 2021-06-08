@@ -3,9 +3,13 @@ from economy.services import EconomyService
 
 
 class BaseEconomyCog(BaseCog):
-    def __init__(self, *args, service=None, **kwargs):
+    def __init__(self, *args, service_cls=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if service is None:
-            service = EconomyService()
-        self.service = service
+        if service_cls is None:
+            service_cls = EconomyService
+        self._service_cls = service_cls
+
+    @property
+    def service(self):
+        return self._service_cls()
