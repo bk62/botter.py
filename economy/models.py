@@ -29,6 +29,9 @@ class Currency(Base):
     def __repr__(self):
         return f"Currency({self.name!r}, {self.symbol!r})"
 
+    def __str__(self):
+        return f'{self.name} {self.symbol}'
+
     @classmethod
     def from_dict(cls, data_dict: dict):
         denominations = data_dict.pop('denominations', {})
