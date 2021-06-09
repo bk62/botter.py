@@ -317,7 +317,7 @@ class EconomyService:
         # deposit reward amount
         user_id = user.id
         note = f'Reward for policy rule {rule_event}'
-        balance = await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
+        balance = await EconomyService.update_currency_balance(user_id, currency_amount, note=note, transaction_type='deposit')
     
         async with db.async_session() as session:
             async with session.begin():

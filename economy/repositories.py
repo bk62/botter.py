@@ -200,10 +200,10 @@ class WalletRepository(BaseRepository):
         logs = res.scalars().all()
         return logs
     
-    async def find_user_transactions(self, user_id, symbol=None):
+    async def find_user_transactions(self, user_id, symbols=None):
         condition = User.id == user_id
-        if symbol:
-            filters = (condition, models.Currency.symbol == symbol)
+        if symbols:
+            filters = (condition, models.Currency.symbol.in_(symbols))
         else:
             filters = (condition,)
         stmt = self.get_transactions_query(filters)
@@ -241,10 +241,10 @@ class WalletRepository(BaseRepository):
         logs = res.scalars().all()
         return logs
     
-    async def find_user_rewards(self, user_id, symbol=None):
+    async def find_user_rewards(self, user_id, symbols=None):
         condition = User.id == user_id
-        if symbol:
-            filters = (condition, models.Currency.symbol == symbol)
+        if symbols:
+            filters = (condition, models.Currency.symbol.in_(symbols))
         else:
             filters = (condition,)
         stmt = self.get_rewards_query(filters)

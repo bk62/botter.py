@@ -66,6 +66,9 @@ class RewardRuleEvent:
     
     def __repr__(self):
         return f'RewardRuleEvent({self.rule_name!r}, {self.discord_event_name!r}, {self.event_name!r}, {self.event_type!r})'
+    
+    def __str__(self):
+        return f'Reward rule "{self.rule_name}": event "{self.event_name} {self.event_type}"'
 
 
 

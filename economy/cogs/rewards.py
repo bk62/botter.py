@@ -107,7 +107,7 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
             await self.reply_embed(ctx, 'Error', 'No reward logs in database')
             return
 
-        data = dict(title=f'Reward logs', object_list=logs)
+        data = dict(title=f'Reward logs', object_list=logs, member_ids=member_ids, currency_symbols=currency_symbols)
         text = await render_template('reward_logs.jinja2', data)
         await ctx.reply(text)
     
@@ -130,6 +130,6 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
             await self.reply_embed(ctx, 'Error', 'No reward logs in database')
             return
 
-        data = dict(title=f'Reward logs', object_list=logs)
+        data = dict(title=f'Reward logs', object_list=logs, currency_symbols=currency_symbols)
         text = await render_template('reward_logs.jinja2', data)
         await ctx.reply(text)
