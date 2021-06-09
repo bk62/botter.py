@@ -1,8 +1,15 @@
 **{{ title }}**
+{{ object_list|length }} results
+{% if member_ids %}
+    Filtered by member id in {{ member_ids }}
+{% endif %}
+{% if currency_symbols %}
+    Filtered by curency id in {{ currency_symbols }}
+{% endif %}
 ```ini
 {% block list %}
     {% for obj in object_list %}
-[({{obj.created.strftime("%m/%d/%Y, %H:%M:%S")}}) {{obj.amount}} {{obj.currency.symbol}} {{obj.user.name}} ({{obj.user_id}})
+[({{obj.created|dt_format}}) {{obj.amount}} {{obj.currency.symbol}} {{obj.user.name}} ({{obj.user_id}})
 Note: {{obj.note}}
     {% endfor %}
 {% endblock %}
