@@ -160,14 +160,14 @@ class CurrencyExchangeTransaction(Base):
     id = Column(Integer, primary_key=True)
 
     user_id = Column(Integer, ForeignKey('user.id'))
-    user = relationship('User', backref='reward_logs', lazy='selectin')
+    user = relationship('User', backref='currency_exchange_transactions', lazy='selectin')
 
     bought_currency_id = Column(Integer, ForeignKey('currency.id'))
-    bought_currency = relationship('Currency', lazy='selectin')
+    bought_currency = relationship('Currency', lazy='selectin', foreign_keys=[bought_currency_id])
     amount_bought = Column(Numeric(10, 2), default=0.0)
 
     sold_currency_id = Column(Integer, ForeignKey('currency.id'))
-    sold_currency = relationship('Currency', lazy='selectin')
+    sold_currency = relationship('Currency', lazy='selectin', foreign_keys=[sold_currency_id])
     amount_sold = Column(Numeric(10, 2), default=0.0)
 
     exchange_rate = Column(Numeric(10, 5), default=1.0)

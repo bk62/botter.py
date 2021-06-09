@@ -325,3 +325,16 @@ class EconomyService:
                 session.add(reward_log)
   
     
+    async def complete_gambling_transaction(self, user, currency_amount: dataclasses.CurrencyAmount, won: bool, note=''):
+        # first check they could've afforded the wager amount
+        async with self:
+            balance = await self.wallet_repo.get_currency_balance(user.id, currency_amount.symbol)
+            wager_amount = currency_amount.amount
+            if balance.balance < wager_amount:
+                raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
+                return
+
+        if won:
+            await self.deposit_in_wallet(user.id, currency_amount, note=f'Winnings from gambling: {note}')
+        else:
+            await self.withdraw_from_wallet(user.id, currency_amount, note=f'Losses from gambling: {note}')
