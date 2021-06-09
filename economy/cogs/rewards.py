@@ -107,7 +107,7 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
             await self.reply_embed(ctx, 'Error', 'No reward logs in database')
             return
 
-        data = dict(title=f'Reward logs\n\n[{len(logs)} results filtered by member id in {member_ids}, currency symbol in {currency_symbols}]', object_list=logs)
+        data = dict(title=f'Reward logs', object_list=logs)
         text = await render_template('reward_logs.jinja2', data)
         await ctx.reply(text)
     
@@ -124,11 +124,12 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
             ]
         find_all = self.service.wallet_repo.find_user_rewards(ctx.author.id, currency_symbols)
         logs = await self.service(find_all)
+
         
         if len(logs) < 1:
             await self.reply_embed(ctx, 'Error', 'No reward logs in database')
             return
 
-        data = dict(title=f'Reward logs\n\n[{len(logs)} results filtered by currency symbol in {currency_symbols}]', object_list=logs)
+        data = dict(title=f'Reward logs', object_list=logs)
         text = await render_template('reward_logs.jinja2', data)
         await ctx.reply(text)

@@ -301,14 +301,13 @@ class EconomyService:
 
 
     # TODO args needlessly long
-    @staticmethod
-    async def grant_reward(rule_event: RewardRuleEvent, event_ctx: EventContext, reward):
+    async def grant_reward(self, rule_event: RewardRuleEvent, event_ctx: EventContext, reward):
         # ensure user has wallet
         user = event_ctx.get_attribute(reward.user)
 
         logger.debug(f'Executing individual reward: {reward.currency_amount.amount} {reward.currency_amount.code} to {user}')
 
-        await EconomyService.get_or_create_wallet(user.id, user)
+        await self.get_or_create_wallet(user.id, user)
 
         # get currency amount from parsed string
         currency_str = f'{reward.currency_amount.amount} {reward.currency_amount.code}'
