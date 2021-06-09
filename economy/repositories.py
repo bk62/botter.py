@@ -213,8 +213,12 @@ class WalletRepository(BaseRepository):
                 contains_eager(models.TransactionLog.user),
                 contains_eager(models.TransactionLog.related_user),
                 contains_eager(models.TransactionLog.currency)
-            )
-            
+            ).
+            order_by(desc(models.TransactionLog.created)).
+            limit(10)
+            # can't send too many logs at once
+        # TODO - download all logs
+        # also rewards
         )
         return stmt
 
@@ -254,9 +258,14 @@ class WalletRepository(BaseRepository):
             options(
                 contains_eager(models.RewardLog.user),
                 contains_eager(models.RewardLog.currency)
-            )
+            ).
+            order_by(desc(models.RewardLog.created)).
+            limit(10)
             
         )
+        # can't send too many logs at once
+        # TODO - download all logs
+        # also transactions
         return stmt
     
     async def find_rewards_by(self, user_ids=None, symbols=None):

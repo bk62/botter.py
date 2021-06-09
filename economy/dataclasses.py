@@ -11,7 +11,7 @@ class CurrencyAmount:
     """An amount of specific currency."""
     amount: Decimal
     symbol: str
-    currency: Currency
+    currency: Currency = None
 
     @classmethod
     def from_amounts(cls, amounts, currency: Currency):
@@ -25,9 +25,16 @@ class CurrencyAmount:
         )
         return cls(symbol=currency.symbol, amount=total, currency=currency)
     
+    @classmethod
+    def copy(cls, currency_amount, **kwargs):
+        kws = dict(amount=currency_amount.amount, symbol=currency_amount.symbol, currency=currency_amount.currency)
+        kws.update(kwargs)
+        return cls(**kws)
+    
 
     def __str__(self):
         return f'{self.amount:.2f} {self.symbol}'
+    
 
 
 @dataclass

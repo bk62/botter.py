@@ -95,7 +95,7 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
     )
     async def guess_hilo(self, ctx, *, currency_str: str):
         currency_amount = await self.service.currency_amount_from_str(currency_str)
-        pot_amount = dataclasses.CurrencyAmount(amount=currency_amount.amount*2, symbol=currency_amount.symbol, currency=currency_amount.currency)
+        pot_amount = dataclasses.CurrencyAmount.copy(currency_amount,amount=currency_amount.amount*2)
 
         embed = discord.Embed(title='Guess a number between 1-99', description='Reply to this message with your guess.')
         embed.add_field(name='Your bet', value=currency_str)
@@ -137,9 +137,9 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
                 won = False
                 break
 
-            pot_amount.amount = pot_amount.amount * Decimal('0.90')
+            pot_amount.amount -=  Decimal(0.125) * currency_amount.amount
 
-            embed = discord.Embed(title=f'(#{attempts}) Your guess is {hilo}', description=f'**{hilo.upper()}**\nReply to this message with your new guess.')
+            embed = discord.Embed(title=f'Your guess is {hilo}', description=f'**{hilo.upper()}**\nReply to this message with your new guess.')
             embed.add_field(name='Your bet', value=currency_str)
             embed.add_field(name='Attempts left', value=5 - attempts)
             embed.add_field(name='New Pot', value=pot_amount)
@@ -147,11 +147,20 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
             reply_to_msg = await ctx.reply(embed=embed)
         
         # change balance
-        await self.service.complete_gambling_transaction(user=ctx.author, currency_amount=currency_amount, won=won, note='Game: Guess High-Low')
+        if won:
+            # win pot amount - bet amount (b/c bet amount not withdrawn yet)
+            update_amount = dataclasses.CurrencyAmount.copy(pot_amount, amount=pot_amount.amount - currency_amount.amount)
+            # but display total pot
+            amount = pot_amount
+        else:
+            # lose bet amount
+            update_amount = currency_amount
+            amount = currency_amount
+        await self.service.complete_gambling_transaction(user=ctx.author, currency_amount=update_amount, won=won, note='Game: Guess High-Low')
 
         # tick on last guess
         await self.tick(message=guess_msg, correct=won)
-        me = get_msg_embed(won, answer, currency_amount)
+        me = get_msg_embed(won, answer, amount)
         await guess_msg.reply(embed=me)
 
                 
