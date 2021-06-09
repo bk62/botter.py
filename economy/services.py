@@ -331,7 +331,7 @@ class EconomyService:
             balance = await self.wallet_repo.get_currency_balance(user.id, currency_amount.symbol)
             wager_amount = currency_amount.amount
             if balance.balance < wager_amount:
-                raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
+                raise WalletOpFailedException(f'Trying to withdraw {wager_amount} but the balance is only {balance.balance}')
                 return
 
         if won:

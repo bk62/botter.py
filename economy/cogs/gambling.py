@@ -30,7 +30,10 @@ def n_die(n):
     return np.random.randint(1, 7, n)
 
 def get_msg(correct, answer, amount):
-        return 'Correct!' if correct else f'Incorrect. The answer is {answer}.\n You won {amount}!'
+        a = 'Correct!' if correct else f'Incorrect.'
+        b = "won" if correct else "lost"
+        c = f'The answer is {answer}.\n You {b} {amount}!'
+        return f'{a}\n{c}'
 
 
 class Gambling(BaseEconomyCog, name='Economy.Gambling'):
@@ -68,6 +71,7 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
 
         await self.service.complete_gambling_transaction(user=ctx.author, currency_amount=currency_amount, won=correct, note='Game: Cointoss')
 
+        ans = 'heads' if guess == 0 else 'tails'
         await self.tick(ctx, correct)
         m = get_msg(correct, ans, currency_amount)
         await ctx.reply(m)
