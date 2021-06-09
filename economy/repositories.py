@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload, contains_eager, aliased
-from sqlalchemy import exc, or_
+from sqlalchemy import exc, or_, func, asc, desc
 
 
 from db import User
@@ -91,6 +91,35 @@ class CurrencyRepository(BaseRepository):
         res = await self.session.execute(stmt)
         currency = res.unique().scalar_one()
         return currency
+    
+    async def get_economy_status(self):
+        data = {}
+        # 1. total # user wallets
+        wallets_stmt = (
+            select(models.Wallet).
+            join(models.Wallet.user).
+            join(models.Wallet.currency_balances).
+            join(models.CurrencyBalance.currency)
+        )
+
+        wallet_count = await self.session.execute(select(func.count(models.Wallet.id)))
+
+        data['num_wallets'] = wallet_count.scalars().one()
+
+        s = select(models.Currency.symbol, func.sum(models.CurrencyBalance.balance).label('total_money_supply')).\
+            join(models.Wallet.currency_balances).\
+            join(models.CurrencyBalance.currency).\
+            group_by(models.Currency.id).\
+            order_by(desc('total_money_supply'))
+        money_supply = await self.session.execute(s)
+
+        data['money_supply'] = {
+            sym: total
+            for sym, total in money_supply.all()
+        }
+
+
+        return data
 
 
 class WalletRepository(BaseRepository):

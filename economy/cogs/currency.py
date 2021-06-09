@@ -180,3 +180,22 @@ class Currency(BaseEconomyCog, name='Economy.Currency',
                 embed['fields'].append(dict(name=c.name, value=s))
             await ctx.reply(embed=discord.Embed.from_dict(embed))
             return
+
+    @commands.command(
+        name='economy_status',
+        help="""View Economy Status
+                """,
+    )
+    async def status(self, ctx):
+        embed = discord.Embed(title='Economy Status')
+
+        await ctx.reply('Generating...')
+        async with ctx.typing(), self.service:
+            summary = await self.service.currency_repo.get_economy_status()
+            
+            print(summary)
+            for n, v in summary.items():
+                embed.add_field(name=n, value=v)
+        
+
+        await ctx.reply(embed=embed)
