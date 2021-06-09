@@ -152,3 +152,34 @@ class RewardLog(Base):
     
     def __str__(self):
         return f'{self.created} {self.amount} {self.currency.symbol} to {self.user.name} ({self.user_id})\nNote: {self.note}\n'
+
+
+class CurrencyExchangeTransaction(Base):
+    __tablename__ = 'currency_exchange_transaction'
+
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship('User', backref='reward_logs', lazy='selectin')
+
+    bought_currency_id = Column(Integer, ForeignKey('currency.id'))
+    bought_currency = relationship('Currency', lazy='selectin')
+    amount_bought = Column(Numeric(10, 2), default=0.0)
+
+    sold_currency_id = Column(Integer, ForeignKey('currency.id'))
+    sold_currency = relationship('Currency', lazy='selectin')
+    amount_sold = Column(Numeric(10, 2), default=0.0)
+
+    exchange_rate = Column(Numeric(10, 5), default=1.0)
+
+    created = Column(DateTime, server_default=func.now())
+
+    __mapper_args__ = {"eager_defaults": True}
+    # B/c of ext reloading - TODO
+    __table_args__ = {'extend_existing': True}
+
+    def __repr__(self):
+        return f"CurrencyExchangeTransaction(user={self.user.name}, amount_bought={self.amount_bought}, bought_currency={self.bought_currency}, amount_sold={self.amount_sold}, sold_currency={self.bought_currency}, exchange_rate={self.exchange_rate})"
+    
+    def __str__(self):
+        return f'{self.created} {self.amount} {self.currency.symbol} to {self.user.name} ({self.user_id})\nNote: {self.note}\n'
