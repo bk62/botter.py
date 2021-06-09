@@ -1,0 +1,17 @@
+**{{ title }}**
+{{ object_list|length }} results
+{% if member_ids %}
+    Filtered by member id in {{ member_ids }}
+{% endif %}
+{% if currency_symbols %}
+    Filtered by curency id in {{ currency_symbols }}
+{% endif %}
+```diff
+{% block list %}
+    {% for obj in object_list %}
+{%- if obj.transaction_type=='deposit' or (current_user_id is defined and obj.transaction_type == 'payment' and obj.related_user_id == current_user_id) -%}
++{% endif %} {{obj.transaction_type}} ({{obj.created.strftime("%m/%d/%Y, %H:%M:%S")}}) {{obj.amount}} {{obj.currency.symbol}} {{obj.user.name}} ({{obj.user_id}}) {% if obj.related_user %} {{obj.related_user.name}} ({{obj.related_user_id}}) {% endif %}
+[Note: {{obj.note}}]
+    {% endfor %}
+{% endblock %}
+```

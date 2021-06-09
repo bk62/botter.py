@@ -112,15 +112,16 @@ class TransactionLog(Base):
 
     amount = Column(Numeric(10, 2), default=0.0)
 
+    transaction_type = Column(String)
     note = Column(String, nullable=True)
 
     created = Column(DateTime, server_default=func.now())
 
     def __repr__(self):
-        return f"TransactionLog(amount={self.amount}, currency={self.currency}, user={self.user.name}, related={self.related_user.name})"
+        return f"TransactionLog(type={self.transaction_type}, amount={self.amount}, currency={self.currency}, user={self.user.name}, related={self.related_user.name})"
     
     def __str__(self):
-        return f'{self.created} {self.amount} {self.currency.symbol} User: {self.user.name} ({self.user_id}), Related user: {self.related_user.name} ({self.related_user_id})\n[Note: {self.note}]\n'
+        return f'{self.transaction_type} - {self.created} {self.amount} {self.currency.symbol} User: {self.user.name} ({self.user_id}), Related user: {self.related_user.name} ({self.related_user_id})\n[Note: {self.note}]\n'
 
 
 

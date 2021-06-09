@@ -1,0 +1,9 @@
+**{{ title }}**
+```ini
+{% block list %}
+    {% for obj in object_list %}
+[({{obj.created.strftime("%m/%d/%Y, %H:%M:%S")}}) {{obj.amount}} {{obj.currency.symbol}} {{obj.user.name}} ({{obj.user_id}})
+Note: {{obj.note}}
+    {% endfor %}
+{% endblock %}
+```

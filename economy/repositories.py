@@ -214,7 +214,7 @@ class WalletRepository(BaseRepository):
     #
     # RewardLog:
     @staticmethod
-    def get_reward_logs_query(filters=None):
+    def get_rewards_query(filters=None):
         stmt = (
             select(models.RewardLog).
             join(models.RewardLog.user).
@@ -236,7 +236,7 @@ class WalletRepository(BaseRepository):
             filters.append(User.id.in_(user_ids))
         if symbols:
             filters.append(models.Currency.symbol.in_(symbols))
-        stmt = self.get_reward_logs_query(filters)
+        stmt = self.get_rewards_query(filters)
         res = await self.session.execute(stmt)
         logs = res.scalars().all()
         return logs

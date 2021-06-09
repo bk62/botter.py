@@ -199,7 +199,7 @@ class EconomyService:
     
 
     @staticmethod
-    async def update_currency_balance(user_id, currency_amount: dataclasses.CurrencyAmount, note=''):
+    async def update_currency_balance(user_id, currency_amount: dataclasses.CurrencyAmount, note='', transaction_type=''):
         # assuming user already has an up to date wallet at this point
         try :
             async with db.async_session() as session, session.begin():
@@ -212,7 +212,7 @@ class EconomyService:
 
                 # store transaction log
                 note =  f'{note}: {currency_amount}'
-                transaction = models.TransactionLog(user_id=user_id, currency_id=balance.currency_id, amount=amount, note=note)
+                transaction = models.TransactionLog(user_id=user_id, currency_id=balance.currency_id, amount=amount, note=note, transaction_type=transaction_type)
                 session.add(transaction)
 
                 return balance
@@ -221,13 +221,13 @@ class EconomyService:
 
     @staticmethod
     async def deposit_in_wallet(user_id, currency_amount: dataclasses.CurrencyAmount, note=''):
-        await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
+        await EconomyService.update_currency_balance(user_id, currency_amount, note=note, transaction_type='deposit')
 
     @staticmethod
     async def withdraw_from_wallet(user_id, currency_amount: dataclasses.CurrencyAmount, note):
         # subtract
         currency_amount.amount = -currency_amount.amount
-        await EconomyService.update_currency_balance(user_id, currency_amount, note=note)
+        await EconomyService.update_currency_balance(user_id, currency_amount, note=note, transaction_type='withdrawal')
 
     @staticmethod
     async def make_payment(sender_id, receiver_id, currency_amount: dataclasses.CurrencyAmount):
@@ -247,7 +247,7 @@ class EconomyService:
 
                 # store transaction log
                 note =  f'Payment from {sender_id} to {receiver_id} of amount {currency_amount}'
-                transaction = models.TransactionLog(user_id=sender_id, related_user_id=receiver_id, currency_id=sender_balance.currency_id, amount=amount, note=note)
+                transaction = models.TransactionLog(user_id=sender_id, related_user_id=receiver_id, currency_id=sender_balance.currency_id, amount=amount, note=note, transaction_type='payment')
                 session.add(transaction)
 
         except exc.NoResultFound as e:
@@ -255,7 +255,7 @@ class EconomyService:
 
 
      # Helpers
-    async def get_or_create_wallet(self, user_id):
+    async def get_or_create_wallet(self, user_id, user=None):
         """
         Get a user's wallet.
         
@@ -273,6 +273,8 @@ class EconomyService:
                 # TODO assuming user without wallet does not have a user model either
                 logger.debug(f'Creating wallet for {user_id}')
                 u = db.User(id=user_id)
+                if user:
+                    u.name = user.display_name
                 wallet = models.Wallet(user=u)
                 self.session.add(u)
                 self.session.add(wallet)
@@ -306,7 +308,7 @@ class EconomyService:
 
         logger.debug(f'Executing individual reward: {reward.currency_amount.amount} {reward.currency_amount.code} to {user}')
 
-        await EconomyService.get_or_create_wallet(user.id)
+        await EconomyService.get_or_create_wallet(user.id, user)
 
         # get currency amount from parsed string
         currency_str = f'{reward.currency_amount.amount} {reward.currency_amount.code}'

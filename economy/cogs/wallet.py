@@ -43,7 +43,7 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
             # only one member
             members = [members]
         for member in members:
-            wallet_data = dataclasses.WalletEmbed.from_wallet(await self.service.get_or_create_wallet(member.id))
+            wallet_data = dataclasses.WalletEmbed.from_wallet(await self.service.get_or_create_wallet(member.id, member))
 
             await ctx.reply(embed=wallet_data.embed)
 
@@ -64,7 +64,7 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
             # TODO inefficient
             try:
                 # make sure they have a wallet
-                await self.service.get_or_create_wallet(member.id)
+                await self.service.get_or_create_wallet(member.id, member)
                 currency_amount = await self.service.currency_amount_from_str(currency_str)
                 await self.service.deposit_in_wallet(member.id, currency_amount, note=f'Initiated by {ctx.author.id} {ctx.author.display_name}')
                 await self.reply_embed(ctx, 'Success', f"Deposited amount {currency_amount} into {member.display_name}'s wallet")
@@ -87,7 +87,7 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
         for member in members:
             try:
                 # make sure they have a wallet
-                await self.service.get_or_create_wallet(member.id)
+                await self.service.get_or_create_wallet(member.id, member)
                 currency_amount = await self.service.currency_amount_from_str(currency_str)
                 await self.service.withdraw_from_wallet(member.id, currency_amount, note=f'Initiated by {ctx.author.id} {ctx.author.display_name}')
                 await self.reply_embed(ctx, 'Success', f"Withdrew {currency_amount} from {member.display_name}'s wallet")
@@ -119,8 +119,8 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
             await self.reply_embed(ctx, 'Error', 'No transactions in database')
             return
 
-        data = dict(title=f'Transactions\n\n[{len(transactions)} results filtered by member id in {member_ids}, currency symbol in {currency_symbols}]', object_list=transactions)
-        text = await render_template('base_list.txt.jinja2', data)
+        data = dict(title=f'Transactions', object_list=transactions, member_ids=member_ids, currency_symbols=currency_symbols)
+        text = await render_template('transactions.jinja2', data)
         await ctx.reply(text)
 
     #
@@ -134,7 +134,7 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
         brief="View your wallet.",
     )
     async def wallet(self, ctx):
-        wallet_data = dataclasses.WalletEmbed.from_wallet(await self.service.get_or_create_wallet(ctx.author.id))
+        wallet_data = dataclasses.WalletEmbed.from_wallet(await self.service.get_or_create_wallet(ctx.author.id, ctx.author))
         await ctx.reply(embed=wallet_data.embed)
 
     @commands.command(
@@ -180,6 +180,6 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
             await self.reply_embed(ctx, 'Error', 'No transactions in database')
             return
 
-        data = dict(title=f'Transactions\n\n[{len(transactions)} results filtered by currency symbol in {currency_symbols}]', object_list=transactions)
-        text = await render_template('base_list.txt.jinja2', data)
+        data = dict(title=f'Transactions', object_list=transactions, current_user_id=ctx.author.id, currency_symbols=currency_symbols)
+        text = await render_template('transactions.jinja2', data)
         await ctx.reply(text)

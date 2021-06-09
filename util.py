@@ -11,7 +11,9 @@ def get_template_env(template_dir='templates'):
     env = Environment(
         loader=FileSystemLoader(template_dir),
         autoescape=select_autoescape(),
-        enable_async=True
+        enable_async=True,
+        trim_blocks = True,
+        lstrip_blocks = True
     )
     return env
 

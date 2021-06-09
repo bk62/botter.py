@@ -108,7 +108,7 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
             return
 
         data = dict(title=f'Reward logs\n\n[{len(logs)} results filtered by member id in {member_ids}, currency symbol in {currency_symbols}]', object_list=logs)
-        text = await render_template('base_list.txt.jinja2', data)
+        text = await render_template('reward_logs.jinja2', data)
         await ctx.reply(text)
     
     @commands.command(
@@ -130,5 +130,5 @@ class Rewards(BaseEconomyCog, name='Economy.Rewards', description="Rewards in vi
             return
 
         data = dict(title=f'Reward logs\n\n[{len(logs)} results filtered by currency symbol in {currency_symbols}]', object_list=logs)
-        text = await render_template('base_list.txt.jinja2', data)
+        text = await render_template('reward_logs.jinja2', data)
         await ctx.reply(text)
