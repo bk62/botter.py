@@ -153,6 +153,7 @@ class EconomyService:
             dict(name='RewardCoin', symbol='RC', description="Currency for rewards"),
             dict(name='GambleCoin', symbol='GC', description="Casino Chips"),
             dict(name="HelpCoin", symbol='HC', description="Rewards for helping others"),
+            dict(name='NewbieHelpCoin', symbol='NHC', description="Help new members to gain NHCs.")
         ]
         for d in data:
             await self.create_currency(**d)

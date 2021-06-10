@@ -106,8 +106,11 @@ THEME = {
 # Rewards
 
 ENABLE_REWARDS_POLICY_FILE_UPLOAD = True
+NEWBIE_HELP_COIN = 'NHC'
+DEFAULT_TIP = 10
 
 
 # Currency Exchange
 
 BASE_CURRENCY = 'BPY'
+

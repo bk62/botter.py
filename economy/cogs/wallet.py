@@ -1,6 +1,7 @@
 import re
 import typing
 from dataclasses import dataclass
+from decimal import Decimal
 
 import discord
 from discord.ext import commands
@@ -8,6 +9,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import exc
 
+import settings
 from base import BaseCog
 import db
 from util import render_template
@@ -19,6 +21,10 @@ from .base import BaseEconomyCog
 
 
 class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet and Payments.'):
+
+    # everything here needs a wallet
+    async def cog_before_invoke(self, ctx):
+        ctx.wallet = await self.service.get_or_create_wallet(ctx.author.id, ctx.author)
 
     #
     # Admin commands:
@@ -183,3 +189,35 @@ class Wallet(BaseEconomyCog, name="Economy.Wallet", description='Economy: Wallet
         data = dict(title=f'Transactions', object_list=transactions, current_user_id=ctx.author.id, currency_symbols=currency_symbols)
         text = await render_template('transactions.jinja2', data)
         await ctx.reply(text)
+    
+    
+    @commands.command(
+        help='New members: Thank members for helping you.',
+        usage="ty_for_help <@helpful_author>",
+        alias="ty"
+    )
+    async def ty_for_help(self, ctx, helped_by: discord.Member):
+
+        # get correct currency symbol from settings
+        currency_symbol = settings.NEWBIE_HELP_COIN
+        default_tip  = settings.DEFAULT_TIP
+        # create a currency amount instance
+        tip_amount = dataclasses.CurrencyAmount(
+            amount=Decimal(default_tip), symbol=currency_symbol)
+
+
+        # check the user has enough to afford a tip
+        has_balance = self.service.has_balance(user=ctx.author, currency_amount=tip_amount)
+
+        if not has_balance:
+            # raise exception so the exception handler can display the error in an embed
+            raise exc.WalletOpFailedException("You don't have enough in your wallet to do this.")
+        
+        # carry out the tip
+        sender_id = ctx.author.id
+        helper_id = helped_by.id
+        await self.service.make_payment(sender_id, helper_id, tip_amount)
+
+        # reply with success message in an embed
+        await self.reply_embed(ctx, 'Success', 
+            f"Tipped {tip_amount} from {ctx.author.display_name} to {helped_by.display_name} for being helpful!")

@@ -5,7 +5,7 @@ An experimental discord bot toolkit prototype that took a life of its own.
 This project is more of an example to inspire ideas or to refer to when start your own bot projects than something ready to add to your server. I do intend to make this something ready to be added to a server. I'll have to revisit it when I can and rethink the aim, structure and whether to spin off some features/code to other repos.
 
 
-I started writing this to participate in [https://1729.com/replit-discord](https://1729.com/replit-discord). 
+I started writing this as a moderately complex project to participate in [https://1729.com/replit-discord](https://1729.com/replit-discord) but it got out of hand because it ended up being a lot of fun. 
 
 This project is intended as an experiment and a learning experience and was built in about a week. So, there are lots of bugs, code repetition, not a single test written, and so on. 
 
@@ -363,7 +363,67 @@ Obvious deficiencies in the DSL are lack of comparisions, date parsing (e.g. for
 
 ## Walkthrough
 
-### 
+Example implementation of the ideas in the project:
+
+### Incentivize helping newbies
+
+Let's start by adding a currency (I also added it to the default currency mix),
+`bp*currency add NewbieHelpCoin NHC; description "Help new members to gain NHCs."`
+
+Then add a policy to the policy config, giving new members these coins to give out.
+```
+rule join_bonus
+    event member join
+    reward 1000 NHC to member
+end
+```
+Add a command new members can use to tip people who help them or answer their questions.
+
+First, I'll add a settings entry, just so changes can be in one place.
+
+
+```python
+NEWBIE_HELP_COIN = 'NHC'
+DEFAULT_TIP = 10
+```
+
+Then I'll add a command in `economy/cogs/wallet.py`
+```python
+@commands.command(
+    help='New members: Thank members for helping you.',
+    usage="ty_for_help <@helpful_person>",
+    alias="ty"
+)
+async def ty_for_help(self, ctx, helped_by: discord.Member):
+
+    # get correct currency symbol from settings
+    currency_symbol = settings.NEWBIE_HELP_COIN
+    default_tip  = settings.DEFAULT_TIP
+    # create a currency amount instance
+    tip_amount = dataclasses.CurrencyAmount(
+        amount=Decimal(default_tip), symbol=currency_symbol)
+
+
+    # check the user has enough to afford a tip
+    has_balance = self.service.has_balance(user=ctx.author, currency_amount=tip_amount)
+
+    if not has_balance:
+        # raise exception so the exception handler can display the error in an embed
+        raise exc.WalletOpFailedException("You don't have enough in your wallet to do this.")
+    
+    # carry out the tip
+    sender_id = ctx.author.id
+    helper_id = helped_by.id
+    await self.service.make_payment(sender_id, helper_id, tip_amount)
+
+    # reply with success message in an embed
+    await self.reply_embed(ctx, 'Success', 
+        f"Tipped {tip_amount} from {ctx.author.display_name} to {helped_by.display_name} for being helpful!")
+```
+
+Now, all we need is a way to make our guild members want to earn the NHC's. We could for example eventually implement exclusive roles or gambling games for people to purchase with their NHCs.
+
+
  
 ## Setup
 
