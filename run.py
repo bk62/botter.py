@@ -86,7 +86,7 @@ def init(force):
 @cli.command('replace_policy_file')
 @click.option('--delete', is_flag=True, help='Delete uploaded file.')
 def replace_policy_file(delete=False):
-    import rewards_policy
+    from economy import rewards_policy
     upload_path = rewards_policy.DSL_PATH / 'uploaded_policy_file.rew'
     if delete:
         try:
