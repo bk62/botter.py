@@ -33,12 +33,13 @@ def dice():
 def n_die(n):
     return np.random.randint(1, 7, n)
 
-def get_msg_embed(correct, answer, amount):
+def get_msg_embed(correct, guess, answer, amount):
     t = 'Congratulations!' if correct else f'Sorry.'
     wl = "won" if correct else "lost"
     d = f'You {wl} {amount}!' 
     e = discord.Embed(title=t, description=d)
-    e.add_field(name='Answer', value=str(answer))
+    e.add_field(name='Your Guess', value=str(guess))
+    e.add_field(name='Actual Answer', value=str(answer))
     return e
 
 async def timeout_after(after=120):
@@ -65,6 +66,9 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
     @commands.command(
         name='cointoss',
         help='''Gamble on a coin flip.
+
+        Chance to win double the amount at 1:1 odds -- fair game.
+
         Arguments (ignores case):
         Guess: One of {head, heads, h} or {tail, tails, t}
         Currency amount e.g. 1BPY
@@ -75,19 +79,20 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
         currency_amount = await self.service.currency_amount_from_str(currency_str)
 
         guess = guess.lower().strip()
-        if guess in {'head', 'heads', 'h'}:
+        if guess in ['head', 'heads', 'h']:
             guess = 0
-        elif guess in {'tail', 'tails', 't'}:
+        elif guess in ['tail', 'tails', 't']:
             guess = 1
         ans = cointoss()
         correct = guess == ans
 
         await self.service.complete_gambling_transaction(user=ctx.author, currency_amount=currency_amount, won=correct, note='Game: Cointoss')
 
-        ans = 'heads' if guess == 0 else 'tails'
+        guess_str = 'heads' if guess == 0 else 'tails'
+        ans_str = 'heads' if ans == 0 else 'tails'
         await self.tick(ctx, correct)
-        me = get_msg_embed(correct, ans, currency_amount)
-        await ctx.reply(reply=me)
+        me = get_msg_embed(correct, guess_str, ans_str, currency_amount)
+        await ctx.reply(embed=me)
 
     
     @commands.command(
@@ -170,11 +175,24 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
         await guess_msg.reply(embed=me)
   
     @commands.command(
-        help='Single-player. Wager on a guessing game. Guess a number between 1-9.',
+        help='''Single-player single round guessing game.
+        
+        Wager on a guessing game at 1:9 odds to win twice the amount -- unfair game.
+        
+        Guess a number between 1-9.''',
         usage='<guess> <currency_amount>',
     )
     async def guess_1p(self, ctx, guess: int, *, currency_str: str):
-        pass
+        currency_amount = await self.service.currency_amount_from_str(currency_str)
+
+        ans = random.randint(1, 9)
+        correct = guess == ans
+
+        await self.service.complete_gambling_transaction(user=ctx.author, currency_amount=currency_amount, won=correct, note='Game: Cointoss')
+
+        await self.tick(ctx, correct)
+        me = get_msg_embed(correct, guess, ans, currency_amount)
+        await ctx.reply(embed=me)
     
     @commands.command(
         help='''Multiplayer single round guessing game. Closest guess takes all.
