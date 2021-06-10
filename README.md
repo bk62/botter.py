@@ -187,6 +187,25 @@ The last two need pagination or attachment downloade in order to get around disc
 
 I think the last game is a good start to building complicated bot behavior reuiring multiple interactions with lots of users e.g. market mechanisms.
 
+#### Currency Exchange
+
+Early (early early...) stage prototype for a user determined economy.
+
+- `get_rate` - get exchange rate from a currency to 'base' (explained below) or another currency 
+- `exchange` - exchange your currency for another
+
+My rough idea here is that the mods of a server may reward users with certain currencies -- e.g. RC = reward coin. These can be redeemed in large quantities for roles or privileges e.g. ability to create your own currency in the guild, purchase  pinned messages to flog your side projects etc. You can also exchange them for other currencies e.g. GamblingCoin to gamble in a games channel.
+
+When you sell your RC for GCs, the current implementation interprets that as increased supply of RC and increased demand for GC and decreases and increases their price respectively. IThis is done by incrementing/decrementing their rates with respect to a 'base' currency (the BotterPy coin BPY in this case) similarly to the market mechanic implemented by games like Age of empires and Offworld Trading company.
+
+I think this part of the project could be a lot of fun if done properly. But needs a lot of redesign and testing and fiddling with constants.
+
+#### NLP
+
+- `scan` - stub function to read message history from a channel. Eventually, it might analyse messages looking for common terms and calculating similarities.
+
+(I tend to join discord servers for programming communities and thought that a text based analysis e.g. of how much people talk about python vs java vs javascript would be interesting.)
+
 ### Database
 
 Here are the database schemas I used:
@@ -408,7 +427,7 @@ In addition to the simple extensions from `basic-discord-bot`,
 ### WIP
 
  - economy
- - nlp
+ - nlp - (never got around to working on this one)
 
 ### TODO
 
