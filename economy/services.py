@@ -386,7 +386,7 @@ class EconomyService:
             # 1% for every 100 unit of currencies exchanged last time
             # i.e. 0.01 / 100 = 1e-4
             # Making it extreme for now: TODO
-            delta = rate.amount_exchanged * Decimal(1e-4) * 1000
+            delta = rate.amount_exchanged * Decimal(1e-4) * Decimal(30)
             if not rate.bought:
                 # increased supply -- negate
                 delta = -delta
