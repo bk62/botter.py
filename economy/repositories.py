@@ -120,6 +120,16 @@ class CurrencyRepository(BaseRepository):
 
 
         return data
+    
+    async def get_exchange_rate(self, currency_symbol):
+        stmt = select(models.CurrencyExchangeRate).\
+            join(models.CurrencyExchangeRate.exchanged_currency).\
+            where(models.Currency.symbol == currency_symbol).\
+            order_by(desc(models.CurrencyExchangeRate.created)).\
+            first()
+        r = await self.session.execute(stmt)
+        return r.scalar_one()
+
 
 
 class WalletRepository(BaseRepository):

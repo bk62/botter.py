@@ -1,7 +1,7 @@
 import asyncio
 
 from db import Base, engine
-from .cogs import Currency, Wallet, Gambling, Rewards
+from .cogs import Currency, Wallet, Gambling, Rewards, Exchange
 from .services import EconomyService
 
 
@@ -23,6 +23,8 @@ def setup(bot):
     rewards_cog = Rewards(bot)
     rewards_cog.init_policy()
     bot.add_cog(rewards_cog)
+
+    bot.add_cog(Exchange(cog))
 
 
 
