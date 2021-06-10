@@ -183,3 +183,47 @@ class CurrencyExchangeTransaction(Base):
     
     def __str__(self):
         return f'{self.created} {self.amount} {self.currency.symbol} to {self.user.name} ({self.user_id})\nNote: {self.note}\n'
+
+
+class CurrencyExchangeRate(Base):
+    __tablename__ = 'currency_exchange_transaction'
+
+    id = Column(Integer, primary_key=True)
+
+    created = Column(DateTime, server_default=func.now())
+
+    exchanged_currency_id = Column(Integer, ForeignKey('currency.id'))
+    exchanged_currency = relationship('Currency', lazy='selectin')
+
+    amount_exchanged = Column(Numeric(10, 2), default=0.0)
+
+    exchange_rate = Column(Numeric(10, 5), default=1.0)
+
+    __mapper_args__ = {"eager_defaults": True}
+    # B/c of ext reloading - TODO
+    __table_args__ = {'extend_existing': True}
+
+
+class CurrencyExchangeRate(Base):
+    __tablename__ = 'currency_exchange_transaction'
+
+    id = Column(Integer, primary_key=True)
+
+    created = Column(DateTime, server_default=func.now())
+
+    exchanged_currency_id = Column(Integer, ForeignKey('currency.id'))
+    exchanged_currency = relationship('Currency', lazy='selectin')
+
+    amount_exchanged = Column(Numeric(10, 2), default=0.0)
+
+    exchange_rate = Column(Numeric(10, 5), default=1.0)
+
+    __mapper_args__ = {"eager_defaults": True}
+    # B/c of ext reloading - TODO
+    __table_args__ = {'extend_existing': True}
+
+    def __repr__(self):
+        return f"CurrencyExchangeRate(created={self.user.name}, amount_currency={self.exchanged_currency}, amount_exchanged={self.amount_exchanged}, exchange_rate={self.exchange_rate})"
+    
+    def __str__(self):
+        return f'{self.created} {self.amount_exchanged} {self.exchanged_currency.symbol} to base currency at rate {self.exchange_rate}\n'
