@@ -24,7 +24,7 @@ def setup(bot):
     rewards_cog.init_policy()
     bot.add_cog(rewards_cog)
 
-    bot.add_cog(Exchange(cog))
+    bot.add_cog(Exchange(bot))
 
 
 
