@@ -325,6 +325,13 @@ class EconomyService:
                 session.add(reward_log)
   
     
+    async def has_balance(self, user, currency_amount: dataclasses.CurrencyAmount):
+        async with self:
+            balance = await self.wallet_repo.get_currency_balance(user.id, currency_amount.symbol)
+            amount = currency_amount.amount
+            return balance.balance < amount
+            
+
     async def complete_gambling_transaction(self, user, currency_amount: dataclasses.CurrencyAmount, won: bool, note=''):
         # first check they could've afforded the wager amount
         async with self:
