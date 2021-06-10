@@ -126,7 +126,7 @@ class CurrencyRepository(BaseRepository):
             join(models.CurrencyExchangeRate.exchanged_currency).\
             where(models.Currency.symbol == currency_symbol).\
             order_by(desc(models.CurrencyExchangeRate.created)).\
-            first()
+            limit(1)
         r = await self.session.execute(stmt)
         return r.scalar_one()
 

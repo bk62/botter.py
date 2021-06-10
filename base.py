@@ -49,4 +49,7 @@ class BaseCog(commands.Cog):
             reply_kwargs['file'] = file
         
         await ctx.reply(embed=embed, **reply_kwargs)
-        
+
+    async def debug(self, ctx, text):
+        if settings.DEBUG and ctx.author.id == self.bot.author_id:
+            await self.reply_embed(ctx, 'Debug', text)

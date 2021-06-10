@@ -99,9 +99,15 @@ LOGGING_CONFIG = {
 THEME = {
     'success': 'green',
     'error': 'red',
-    'warning': 'orange', 
+    'warning': 'orange',
+    'debug': 'yellow',
 }
 
 # Rewards
 
 ENABLE_REWARDS_POLICY_FILE_UPLOAD = True
+
+
+# Currency Exchange
+
+BASE_CURRENCY = 'BPY'

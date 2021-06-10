@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, BigInteger, DateTime, func
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, BigInteger, DateTime, func, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 
@@ -162,11 +162,11 @@ class CurrencyExchangeTransaction(Base):
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship('User', backref='currency_exchange_transactions', lazy='selectin')
 
-    bought_currency_id = Column(Integer, ForeignKey('currency.id'))
+    bought_currency_id = Column(Integer, ForeignKey('currency.id'), nullable=True)
     bought_currency = relationship('Currency', lazy='selectin', foreign_keys=[bought_currency_id])
     amount_bought = Column(Numeric(10, 2), default=0.0)
 
-    sold_currency_id = Column(Integer, ForeignKey('currency.id'))
+    sold_currency_id = Column(Integer, ForeignKey('currency.id'), nullable=True)
     sold_currency = relationship('Currency', lazy='selectin', foreign_keys=[sold_currency_id])
     amount_sold = Column(Numeric(10, 2), default=0.0)
 
@@ -186,18 +186,20 @@ class CurrencyExchangeTransaction(Base):
 
 
 class CurrencyExchangeRate(Base):
-    __tablename__ = 'currency_exchange_transaction'
+    __tablename__ = 'currency_exchange_rate'
 
     id = Column(Integer, primary_key=True)
 
     created = Column(DateTime, server_default=func.now())
 
-    exchanged_currency_id = Column(Integer, ForeignKey('currency.id'))
+    exchanged_currency_id = Column(Integer, ForeignKey('currency.id'), nullable=False)
     exchanged_currency = relationship('Currency', lazy='selectin', foreign_keys=[exchanged_currency_id])
 
-    amount_exchanged = Column(Numeric(10, 2), default=0.0)
+    amount_exchanged = Column(Numeric(10, 2), default=0.0, nullable=False)
 
-    exchange_rate = Column(Numeric(10, 5), default=1.0)
+    exchange_rate = Column(Numeric(10, 5), default=1.0, nullable=False)
+
+    bought = Column(Boolean, default=False, nullable=False)
 
     __mapper_args__ = {"eager_defaults": True}
     # B/c of ext reloading - TODO

@@ -2,14 +2,16 @@ import functools
 import logging
 from contextlib import AsyncExitStack
 from functools import wraps
+from decimal import Decimal
 
 from sqlalchemy import exc
+from sqlalchemy.orm.session import make_transient
 
-import db
+import db, settings
 
 from economy import models, repositories, parsers, util, dataclasses
 from economy.rewards_policy import RewardRuleEvent, EventContext
-from economy.exc import WalletOpFailedException
+from economy import exc as econ_exc
 
 logger = logging.getLogger('economy.EconomyService')
 
@@ -144,10 +146,16 @@ class EconomyService:
         self.session.add(c)
         return c
 
-    async def create_initial_currency(self):
+    async def create_initial_currencies(self):
         """Helper to create an initial currency with spec `BotterPY BPY; description "Initial currency."`"""
-        data = dict(name='BotterPy', symbol='BPY', description="Initial currency")
-        await self.create_currency(**data)
+        data = [
+            dict(name='BotterPy', symbol='BPY', description="Base currency. Intrinsic value of '1'. Fundamental exchange rate of other currencies are written in terms of BPY."),
+            dict(name='RewardCoin', symbol='RC', description="Currency for rewards"),
+            dict(name='GambleCoin', symbol='GC', description="Casino Chips"),
+            dict(name="HelpCoin", symbol='HC', description="Rewards for helping others"),
+        ]
+        for d in data:
+            await self.create_currency(**d)
 
     async def add_currency(self, currency_dict):
         currency = models.Currency.from_dict(currency_dict)
@@ -192,11 +200,11 @@ class EconomyService:
                 repo = repositories.CurrencyRepository(session)
                 currency = await repo.find_currency_by_denoms(denoms)
         except exc.NoResultFound:
-            raise WalletOpFailedException('Invalid currency string: No matching currency')
+            raise econ_exc.NoMatchingCurrency('Invalid currency string: No matching currency')
         except exc.MultipleResultsFound:
-            raise WalletOpFailedException('Invalid currency string: Matches multiple currencies')
+            raise econ_exc.MultipleMatchingCurrencies('Invalid currency string: Matches multiple currencies')
         return dataclasses.CurrencyAmount.from_amounts(amounts, currency)
-    
+
 
     @staticmethod
     async def update_currency_balance(user_id, currency_amount: dataclasses.CurrencyAmount, note='', transaction_type=''):
@@ -207,7 +215,7 @@ class EconomyService:
                 balance = await repo.get_currency_balance(user_id, currency_amount.symbol)
                 amount = currency_amount.amount
                 if amount < 0 and balance.balance + amount < 0:
-                    raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
+                    raise econ_exc.WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
                 balance.balance += amount
 
                 # store transaction log
@@ -217,7 +225,27 @@ class EconomyService:
 
                 return balance
         except exc.NoResultFound as e:
-            raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
+            raise econ_exc.WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
+
+    # same as above but doesn't manage session and uses self.session
+    # in order for the caller wrap in session context with other methods
+    # in the same DB transaction
+    async def update_wallet(self, user_id, currency_amount: dataclasses.CurrencyAmount, note='', transaction_type=''):
+        try:
+            balance = await self.wallet_repo.get_currency_balance(user_id, currency_amount.symbol)
+            amount = currency_amount.amount
+            if amount < 0 and balance.balance + amount < 0:
+                raise econ_exc.WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {balance.balance}')
+            balance.balance += amount
+
+            # store transaction log
+            note = f'{note}: {currency_amount}'
+            transaction = models.TransactionLog(user_id=user_id, currency_id=balance.currency_id, amount=amount, note=note, transaction_type=transaction_type)
+            self.session.add(transaction)
+
+            return balance
+        except exc.NoResultFound as e:
+            raise econ_exc.NoMatchingCurrency(f'{e}: Currency {currency_amount.symbol} not found')
 
     @staticmethod
     async def deposit_in_wallet(user_id, currency_amount: dataclasses.CurrencyAmount, note=''):
@@ -241,7 +269,7 @@ class EconomyService:
                 receiver_balance = await repo.get_currency_balance(receiver_id, currency_amount.symbol)
                 amount = currency_amount.amount
                 if sender_balance.balance < amount:
-                    raise WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {sender_balance.balance}')
+                    raise econ_exc.WalletOpFailedException(f'Trying to withdraw {amount} but the balance is only {sender_balance.balance}')
                 sender_balance.balance -= amount
                 receiver_balance.balance += amount
 
@@ -251,7 +279,7 @@ class EconomyService:
                 session.add(transaction)
 
         except exc.NoResultFound as e:
-            raise WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
+            raise econ_exc.WalletOpFailedException(f'{e}: Currency {currency_amount.symbol} not found')
 
 
      # Helpers
@@ -329,7 +357,7 @@ class EconomyService:
         async with self:
             balance = await self.wallet_repo.get_currency_balance(user.id, currency_amount.symbol)
             amount = currency_amount.amount
-            return balance.balance < amount
+            return amount <= balance.balance
             
 
     async def complete_gambling_transaction(self, user, currency_amount: dataclasses.CurrencyAmount, won: bool, note=''):
@@ -338,10 +366,71 @@ class EconomyService:
             balance = await self.wallet_repo.get_currency_balance(user.id, currency_amount.symbol)
             wager_amount = currency_amount.amount
             if balance.balance < wager_amount:
-                raise WalletOpFailedException(f'Trying to withdraw {wager_amount} but the balance is only {balance.balance}')
+                raise econ_exc.WalletOpFailedException(f'Trying to withdraw {wager_amount} but the balance is only {balance.balance}')
                 return
 
         if won:
             await self.deposit_in_wallet(user.id, currency_amount, note=f'Winnings from gambling: {note}')
         else:
             await self.withdraw_from_wallet(user.id, currency_amount, note=f'Losses from gambling: {note}')
+
+    async def get_updated_exchange_rate(self, currency_symbol):
+        """Enforces the exchange rate policy"""
+        try:
+            rate = await self.currency_repo.get_exchange_rate(currency_symbol)
+            # make a copy with updated values
+            self.session.expunge(rate)
+            make_transient(rate)
+            # Update:
+            # A good value might be:
+            # 1% for every 100 unit of currencies exchanged last time
+            # i.e. 0.01 / 100 = 1e-4
+            # Making it extreme for now: TODO
+            delta = rate.amount_exchanged * Decimal(1e-4) * 1000
+            if not rate.bought:
+                # increased supply -- negate
+                delta = -delta
+            # calc new rate
+            # bound it # TODO
+            new_rate = rate.exchange_rate + Decimal(delta)
+            if new_rate > 20:
+                new_rate = 20
+            elif new_rate < 0.2:
+                new_rate = 0.2
+            rate.exchange_rate = new_rate
+
+        except exc.NoResultFound:
+            # create new history
+            currency = await self.currency_repo.get(currency_symbol)
+            # new exchange rates start at 1.00
+            rate = models.CurrencyExchangeRate(exchanged_currency=currency, exchange_rate=Decimal(1.00))
+
+        return rate
+
+    async def complete_exchange_transaction(self, user, currency: models.Currency, amount: Decimal, rate: models.CurrencyExchangeRate, bought: bool, note=''):
+        # Handle converting currency to base currency or vice versa
+        # TODO
+        # leaving currency id correspoding to base currency null for now
+        transaction = models.CurrencyExchangeTransaction(
+            user_id=user.id, exchange_rate=rate.exchange_rate,
+            # exchange rate always in terms of base
+            # e.g. A = x BPY then x is the rate
+        )
+        if bought:
+            transaction.bought_currency = currency
+            transaction.amount_bought = amount
+        else:
+            transaction.sold_currency = currency
+            transaction.amount_sold = amount
+
+        # update rate obj
+        rate.exchanged_currency_id = currency.id
+        rate.amount_exchanged = amount
+        rate.bought = bought
+
+        await self.session.merge(transaction)
+
+        await self.session.merge(rate) # also store updated rate which is not in db yet
+
+    async def get_base_currency(self):
+        return await self(self.currency_repo.get(settings.BASE_CURRENCY))
