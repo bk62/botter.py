@@ -48,8 +48,8 @@ async def timeout_after(after=120):
 
 class Gambling(BaseEconomyCog, name='Economy.Gambling'):
     # helper
-    async def tick(self, ctx=None, correct=False, message=None):
-        emoji = '\N{WHITE HEAVY CHECK MARK}' if correct else '\N{CROSS MARK}'
+    async def tick(self, ctx=None, correct=False, message=None, check='\N{WHITE HEAVY CHECK MARK}', cross='\N{CROSS MARK}'):
+        emoji = check if correct else cross
         try:
             if message:
                 await message.add_reaction(emoji)
@@ -147,7 +147,7 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
 
             embed = discord.Embed(title=f'Your guess is {hilo}', description=f'**{hilo.upper()}**\nReply to this message with your new guess.')
             embed.add_field(name='Your bet', value=currency_str)
-            embed.add_field(name='Attempts left', value=5 - attempts)
+            embed.add_field(name='Attempts left', value=str(5 - attempts))
             embed.add_field(name='New Pot', value=pot_amount)
         
             reply_to_msg = await ctx.reply(embed=embed)
@@ -181,7 +181,7 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
         
         Guess a number between 1-99.
                 
-        Only people who reply to first message with a guess join the game. Game creator joins automatically. Game is cancelled if noone else joins within 2 mins.
+        Only people who reply to first message with a guess join the game. Game creator joins automatically. Game is cancelled if no one joins within 1 min.
 
         Set buy in amount as last argument.
         E.g.
@@ -192,12 +192,12 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
     async def guess_multi(self, ctx, members: commands.Greedy[discord.Member] = None, *, currency_str: str):
         buy_in_amount = await self.service.currency_amount_from_str(currency_str)
 
-        embed = discord.Embed(title='Guess a number between 1-99', description='Reply to this message within 2 mins with your guess to join the game.')
+        embed = discord.Embed(title='Guess a number between 1-99', description='Reply to this message with your guess to join the game.')
         embed.add_field(name='Buy in amount', value=str(buy_in_amount), inline=False)
 
         creator = ctx.author
         
-        reply_to_msg = await ctx.reply(embed=embed)
+        reply_to_msg = await ctx.reply('Betting over in 30s after last reply.', embed=embed)
 
         answer = random.randint(1, 99)
         players = {
@@ -213,15 +213,11 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
             return m.content.isdigit() and m.reference and m.reference.message_id == reply_to_msg.id  
 
         try:
-            # start the clock
-            timeout_120 = timeout_after(120)
-            timeout_task = asyncio.create_task(timeout_120)
-
-            await timeout_task
-
             # take guesses
             while True:
-                guess_msg = await self.bot.wait_for('message', check=is_valid, timeout=120.0)
+                guess_msg = await self.bot.wait_for('message', check=is_valid, timeout=30.0)
+                # acknowledge guess
+                await self.tick(message=guess_msg, correct=True)
                 guess_num = int(guess_msg.content)
 
                 if guess_msg.author == creator:
@@ -232,74 +228,98 @@ class Gambling(BaseEconomyCog, name='Economy.Gambling'):
                         'user': u,
                         'guess': guess_num
                     }
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
+            # print(f'timeout error {e}')
             await reply_to_msg.reply('Betting is now closed. Processing winners...')
-    
+
+        # DEBUG
+        # simulate player guesses for testing with a single user
+        # class FakeUser:
+        #     def __init__(self,id):
+        #         self.id = id
+        #         self.display_name = f'fake user {id}'
+        #
+        # low = FakeUser(1)
+        # players[low.id] = {
+        #     'user': low,
+        #     'guess': 10
+        # }
+        # high = FakeUser(2)
+        # players[high.id] = {
+        #     'user': high,
+        #     'guess': 50
+        # }
+
         if len(players) == 1 and players[creator.id]['guess'] is not None:
             # only game creator played
             await reply_to_msg.reply(f'{ctx.author.display_name} won by forfeit!')
             return
         
-        embed_dict = {'fields': []}
+        embed_dict = {
+            'title': f'The answer is {answer}',
+            'fields': []}
         desc = ''
         pot_amount = dataclasses.CurrencyAmount.copy(buy_in_amount, amount=Decimal(0))
         split_amount = dataclasses.CurrencyAmount.copy(buy_in_amount, amount=Decimal(0))
 
-        for player_id, guess_dict in players:
+        for player_id, guess_dict in players.items():
             player = guess_dict['user']
             guess = guess_dict['guess']
+            if guess is None:
+                continue
             # first check they can afford the bet
+            # Note: comment 4 lines if debugging with fake players
             has_balance = self.service.has_balance(user=player, currency_amount=buy_in_amount)
             if not has_balance:
                 embed_dict['fields'].append(dict(name=player.display_name, value='Forfeited because they cannot afford the buy in.'))
                 continue
             pot_amount.amount += buy_in_amount.amount
-            embed_dict['fields'].append(dict(name=player.display_name, value=f'Guessed: {guess}'))
+            embed_dict['fields'].append(dict(name=player.display_name, value=f'Guessed: {guess}', inline=True))
             if guess == answer:
                 winners.append(player)
-            else:
+            elif guess:
                 closest[abs(guess - answer)].append(player)
 
         if len(winners) == 0:
-            desc = 'No one guessed accurately. Closest guesses win!'
-            closest_dist = min(closest.keys())
+            desc = 'No one guessed accurately. Closest guesses win!\n'
+            keys = closest.keys()
+            if len(keys) == 0:
+                # noone guessed
+                await self.reply_embed(ctx, 'Error', '**No one made a a guess.**\n The game has been cancelled.')
+                return
+            closest_dist = min(keys)
             winners = closest[closest_dist]
         
         deposit_amount = pot_amount
         if len(winners) > 1:
             split_amount.amount = pot_amount.amount / Decimal(len(winners))
             deposit_amount = split_amount
-            desc += f'\nThere are {len(winners)} winners.\nPot split **{len(winners)} ways**. Each gets {split_amount}'
+            desc += f'\nThere are {len(winners)} winners.\n\nPot split **{len(winners)} ways**. Each gets {split_amount}'
             winners_str = ', '.join(u.display_name for u in winners)
         else:
             deposit_amount = pot_amount
-            desc = f'{winners[0].display_name} wins {pot_amount}!'
+            desc += f'{winners[0].display_name} wins {pot_amount}!'
             winners_str = winners[0].display_name
         
-
-        embed_dict('fields').append(dict(name='Winners:', value=winners_str,inline=False))
+        embed_dict['description'] = desc
+        embed_dict['fields'].append(dict(name='Total Pot', value=str(pot_amount), inline=False))
+        embed_dict['fields'].append(dict(name='Winners:', value=winners_str,inline=False))
 
         # Deposit winnings/withdra1 bet amount
         # first subtract buy in amount from winnings
         deposit_amount.amount = deposit_amount.amount - buy_in_amount.amount
         # create winners set so membership check is O(1)
         winners_set = set(w.id for w in winners)
-        for player_id, guess_dict in players:
+        for player_id, guess_dict in players.items():
             player = guess_dict['user']
             # sub buy in if lost
             # add (pot / num_winners) - buy win if won
             won = player_id in winners_set
             amount = deposit_amount if won else buy_in_amount
-            await self.service.complete_gambling_transaction(user=player,currency_amount=deposit_amount, note='Game: Multiplayer Guess Game (Single Round)', won=won)
+            # await ctx.reply(f'simulate amount tran {"+" if won else "-"} {amount} to {player}')
+            # Note: uncomment above and comment next line if debugging with fake players
+            await self.service.complete_gambling_transaction(user=player, currency_amount=amount, note='Game: Multiplayer Guess Game (Single Round)', won=won)
         
         # finally done
-        embed = discord.Embed.from_dict(embed)
+        embed = discord.Embed.from_dict(embed_dict)
         await reply_to_msg.reply(embed=embed)
-            
-
-            
-
-
-        
-        
-
